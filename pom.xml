@@ -84,6 +84,11 @@
       <artifactId>akka-stream_${scala.major.version}</artifactId>
       <version>${akka.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.typesafe.akka</groupId>
+      <artifactId>akka-stream-kafka_${scala.major.version}</artifactId>
+      <version>${akka.stream.kafka.version}</version>
+    </dependency>
 
     <!-- kafka -->
     <dependency>
