@@ -8,9 +8,9 @@ import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.typesafe.config.{Config, ConfigFactory}
+import com.ubirch.kafkasupport.MessageEnvelope
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -25,8 +25,8 @@ package object messagedecoder {
 
 
   val producerConfig: Config = system.settings.config.getConfig("akka.kafka.producer")
-  val producerSettings: ProducerSettings[String, Array[Byte]] =
-    ProducerSettings(producerConfig, new StringSerializer, new ByteArraySerializer)
+  val producerSettings: ProducerSettings[String, String] =
+    ProducerSettings(producerConfig, new StringSerializer, new StringSerializer)
       .withBootstrapServers(kafkaUrl)
 
 
@@ -42,22 +42,30 @@ package object messagedecoder {
   val outgoingTopic: String = conf.getString("kafka.topic.outgoing")
 
 
-  def transformValue(msg: ConsumerMessage.CommittableMessage[String, Array[Byte]]) = {
-    new String(msg.record.value()).toUpperCase.getBytes
-  }
-
   val decoderStream: RunnableGraph[DrainingControl[Done]] =
     Consumer
       .committableSource(consumerSettings, Subscriptions.topics(incomingTopic))
       .map { msg =>
-        // ToDo BjB 19.09.18 : actual transformation should happen somewhere here
-        val transformed = transformValue(msg)
-        ProducerMessage.Message[String, Array[Byte], ConsumerMessage.CommittableOffset](
-          new ProducerRecord(outgoingTopic, transformed),
+        val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
+        val transformed = transform(messageEnvelope)
+        val recordToSend = MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformed)
+
+        ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
+          recordToSend,
           msg.committableOffset
         )
-           }
+      }
       .toMat(Producer.commitableSink(producerSettings))(Keep.both)
       .mapMaterializedValue(DrainingControl.apply)
 
+  /**
+    * ToDo BjB 21.09.18 : actual transformation should happen somewhere below
+    */
+  def transform(envelope: MessageEnvelope[Array[Byte]]): MessageEnvelope[String] = {
+    MessageEnvelope(transformPayload(envelope.payload), envelope.headers)
+  }
+
+  private def transformPayload(payload: Array[Byte]): String = {
+    new String(payload).toUpperCase
+  }
 }
