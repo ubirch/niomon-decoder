@@ -46,15 +46,15 @@
   </organization>
 
   <properties>
-    <ubirch-decoder.version>1.0</ubirch-decoder.version>
     <kafka-support.version>1.0</kafka-support.version>
+    <ubirch-protocol-java.version>1.0</ubirch-protocol-java.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>ubirch</groupId>
-      <artifactId>ubirch-decoder</artifactId>
-      <version>${ubirch-decoder.version}</version>
+      <artifactId>ubirch-protocol-java</artifactId>
+      <version>${ubirch-protocol-java.version}</version>
     </dependency>
     <dependency>
       <groupId>ubirch</groupId>
