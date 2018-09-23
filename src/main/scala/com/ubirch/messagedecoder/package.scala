@@ -1,5 +1,7 @@
 package com.ubirch
 
+import java.nio.charset.StandardCharsets
+
 import akka.Done
 import akka.actor.ActorSystem
 import akka.kafka._
@@ -7,8 +9,11 @@ import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.kafkasupport.MessageEnvelope
+import com.ubirch.protocol.ProtocolMessageEnvelope
+import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
 
@@ -21,14 +26,13 @@ package object messagedecoder {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
+  private val mapper: ObjectMapper = new ObjectMapper
   private val kafkaUrl: String = conf.getString("kafka.url")
-
 
   val producerConfig: Config = system.settings.config.getConfig("akka.kafka.producer")
   val producerSettings: ProducerSettings[String, String] =
     ProducerSettings(producerConfig, new StringSerializer, new StringSerializer)
       .withBootstrapServers(kafkaUrl)
-
 
   val consumerConfig: Config = system.settings.config.getConfig("akka.kafka.consumer")
   val consumerSettings: ConsumerSettings[String, Array[Byte]] =
@@ -54,7 +58,7 @@ package object messagedecoder {
           recordToSend,
           msg.committableOffset
         )
-      }
+           }
       .toMat(Producer.commitableSink(producerSettings))(Keep.both)
       .mapMaterializedValue(DrainingControl.apply)
 
@@ -66,6 +70,13 @@ package object messagedecoder {
   }
 
   private def transformPayload(payload: Array[Byte]): String = {
-    new String(payload).toUpperCase
+    val protocolMessage = payload(0) match {
+      case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+      case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
+    }
+
+    val envelope = new ProtocolMessageEnvelope(protocolMessage)
+    envelope.setRaw(payload)
+    mapper.writeValueAsString(envelope)
   }
 }
