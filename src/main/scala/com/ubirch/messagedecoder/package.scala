@@ -18,6 +18,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.util.Try
 
 package object messagedecoder {
 
@@ -53,7 +54,7 @@ package object messagedecoder {
         val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
         val transformed = transform(messageEnvelope)
         val recordToSend = MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformed)
-
+        // ToDo BjB 24.09.18 : send errors to "kafka2http"
         ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
           recordToSend,
           msg.committableOffset
@@ -70,13 +71,22 @@ package object messagedecoder {
   }
 
   private def transformPayload(payload: Array[Byte]): String = {
-    val protocolMessage = payload(0) match {
-      case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
-      case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
-    }
+    Try {
+      val protocolMessage = payload(0) match {
+        case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+        case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
+      }
 
-    val envelope = new ProtocolMessageEnvelope(protocolMessage)
-    envelope.setRaw(payload)
-    mapper.writeValueAsString(envelope)
+      val envelope = new ProtocolMessageEnvelope(protocolMessage)
+      envelope.setRaw(payload)
+      mapper.writeValueAsString(envelope)
+    } match {
+        //// ToDo BjB 24.09.18 : real Errorhandling
+      case scala.util.Success(value) => value
+      case scala.util.Failure(exception) => {
+        system.log.error("error while decoding!",exception.getCause)
+        exception.getMessage + exception.getCause.getMessage
+      }
+    }
   }
 }
