@@ -73,6 +73,11 @@
       <artifactId>scala-logging_${scala.major.version}</artifactId>
       <version>${scala-logging.version}</version>
     </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback-classic.version}</version>
+    </dependency>
 
     <!-- akka -->
     <dependency>
@@ -176,7 +181,7 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.ubirch.receiver.Main</mainClass>
+                  <mainClass>com.ubirch.messagedecoder.Main</mainClass>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>reference.conf</resource>
