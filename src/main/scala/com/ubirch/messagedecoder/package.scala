@@ -16,18 +16,21 @@ import com.ubirch.protocol.ProtocolMessageEnvelope
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
+import org.json4s._
+import org.json4s.native.Serialization._
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 package object messagedecoder {
+  implicit val formats: DefaultFormats = DefaultFormats
 
   val conf: Config = ConfigFactory.load
   implicit val system: ActorSystem = ActorSystem("message-decoder")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  private val mapper: ObjectMapper = new ObjectMapper
   private val kafkaUrl: String = conf.getString("kafka.url")
 
   val producerConfig: Config = system.settings.config.getConfig("akka.kafka.producer")
@@ -45,48 +48,46 @@ package object messagedecoder {
 
   val incomingTopic: String = conf.getString("kafka.topic.incoming")
   val outgoingTopic: String = conf.getString("kafka.topic.outgoing")
+  val errorsTopic: String = conf.getString("kafka.topic.errors")
 
 
   val decoderStream: RunnableGraph[DrainingControl[Done]] =
     Consumer
       .committableSource(consumerSettings, Subscriptions.topics(incomingTopic))
-      .map { msg =>
-        val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
-        val transformed = transform(messageEnvelope)
-        val recordToSend = MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformed)
-        // ToDo BjB 24.09.18 : send errors to "kafka2http"
-        ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
-          recordToSend,
-          msg.committableOffset
-        )
-           }
+      .map {
+        msg =>
+          val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
+          val recordToSend = transform(messageEnvelope.payload) match {
+            case scala.util.Success(value) =>
+              system.log.debug(s"decoded: $value")
+              val transformedEnvelope = MessageEnvelope(value, messageEnvelope.headers)
+              MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformedEnvelope)
+            case scala.util.Failure(exception) =>
+              system.log.error("error while decoding!", exception.getCause)
+              val error = mutable.HashMap("error" -> exception.getMessage)
+              if (exception.getCause != null) error("cause") = exception.getCause.getMessage
+
+              val errorEnvelope = MessageEnvelope(write(error), messageEnvelope.headers)
+              MessageEnvelope.toRecord(errorsTopic, msg.record.key(), errorEnvelope)
+          }
+
+          ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
+            recordToSend,
+            msg.committableOffset
+          )
+      }
       .toMat(Producer.commitableSink(producerSettings))(Keep.both)
       .mapMaterializedValue(DrainingControl.apply)
 
-  /**
-    * ToDo BjB 21.09.18 : actual transformation should happen somewhere below
-    */
-  def transform(envelope: MessageEnvelope[Array[Byte]]): MessageEnvelope[String] = {
-    MessageEnvelope(transformPayload(envelope.payload), envelope.headers)
-  }
 
-  private def transformPayload(payload: Array[Byte]): String = {
-    Try {
-      val protocolMessage = payload(0) match {
-        case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
-        case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
-      }
-
-      val envelope = new ProtocolMessageEnvelope(protocolMessage)
-      envelope.setRaw(payload)
-      mapper.writeValueAsString(envelope)
-    } match {
-        //// ToDo BjB 24.09.18 : real Errorhandling
-      case scala.util.Success(value) => value
-      case scala.util.Failure(exception) => {
-        system.log.error("error while decoding!",exception.getCause)
-        exception.getMessage + exception.getCause.getMessage
-      }
+  def transform(payload: Array[Byte]): Try[String] = Try {
+    val protocolMessage = payload(0) match {
+      case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+      case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
     }
+
+    val envelope = new ProtocolMessageEnvelope(protocolMessage)
+    envelope.setRaw(payload)
+    new ObjectMapper().writeValueAsString(envelope)
   }
 }

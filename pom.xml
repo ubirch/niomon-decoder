@@ -100,6 +100,12 @@
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-stream-kafka_${scala.major.version}</artifactId>
       <version>${akka.stream.kafka.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>kafka-clients</artifactId>
+          <groupId>org.apache.kafka</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.typesafe.akka</groupId>
@@ -121,12 +127,23 @@
       <version>${scalatest.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>net.cakesolutions</groupId>
+      <artifactId>scala-kafka-client-testkit_${scala.major.version}</artifactId>
+      <version>${simple.kafka.client.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- other dependencies -->
     <dependency>
       <groupId>org.json4s</groupId>
       <artifactId>json4s-native_${scala.major.version}</artifactId>
       <version>${json4s-native.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-jackson_${scala.major.version}</artifactId>
+      <version>${json4s-jackson.version}</version>
     </dependency>
 
     <dependency>
