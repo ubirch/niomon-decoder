@@ -47,13 +47,13 @@
 
   <properties>
     <build.number>${timestamp}-dev</build.number>
-    <kafka-support.version>1.0</kafka-support.version>
-    <ubirch-protocol-java.version>1.0</ubirch-protocol-java.version>
+    <kafka-support.version>1.0.0</kafka-support.version>
+    <ubirch-protocol-java.version>1.0.0</ubirch-protocol-java.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>ubirch</groupId>
+      <groupId>com.ubirch</groupId>
       <artifactId>ubirch-protocol-java</artifactId>
       <version>${ubirch-protocol-java.version}</version>
     </dependency>
