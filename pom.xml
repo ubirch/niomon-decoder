@@ -48,7 +48,7 @@
   <properties>
     <build.number>${timestamp}-dev</build.number>
     <kafka-support.version>1.0.0</kafka-support.version>
-    <ubirch-protocol-java.version>1.0.0</ubirch-protocol-java.version>
+    <ubirch-protocol-java.version>1.0.2-SNAPSHOT</ubirch-protocol-java.version>
   </properties>
 
   <dependencies>
@@ -284,6 +284,7 @@
                   <filtering>true</filtering>
                   <includes>
                     <include>docker-compose.yml</include>
+                    <include>docker-compose.override.yml</include>
                   </includes>
                 </resource>
               </resources>

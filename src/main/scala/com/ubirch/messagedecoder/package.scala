@@ -86,8 +86,6 @@ package object messagedecoder {
       case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
     }
 
-    val envelope = new ProtocolMessageEnvelope(protocolMessage)
-    envelope.setRaw(payload)
-    new ObjectMapper().writeValueAsString(envelope)
+    new ObjectMapper().writeValueAsString(new ProtocolMessageEnvelope(protocolMessage, payload))
   }
 }

@@ -1,17 +1,15 @@
 version: '2'
 services:
-  zookeeper:
-    image: wurstmeister/zookeeper
+  message-decoder-1:
+    image: ubirch/${project.artifactId}:${build.number}
+    depends_on:
+    - kafka
+    - zookeeper
     ports:
-    - "2181:2181"
-  kafka:
-    image: wurstmeister/kafka:2.11-2.0.0
-    ports:
-    - "9092:9092"
+    - "9012:9010"
+    - "2552"
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: localhost
-      KAFKA_CREATE_TOPICS_SEPARATOR: |
-      KAFKA_CREATE_TOPICS: "incoming:1:1|outgoing:1:1"
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+      KAFKA_URL: "kafka:9092"
+      KAFKA_TOPIC_REQUEST_PAYLOAD_BIN: "request.payload.bin"
+      KAFKA_TOPIC_CANONICAL_JSON: "canonical.json"
+      KAFKA_TOPIC_CANONICAL_INVALID_JSON: "canonical.invalid.json"
