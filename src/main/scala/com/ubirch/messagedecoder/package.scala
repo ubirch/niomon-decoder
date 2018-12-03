@@ -1,7 +1,6 @@
 package com.ubirch
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
 
 import akka.Done
 import akka.actor.ActorSystem
@@ -10,14 +9,13 @@ import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, RunnableGraph}
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.kafkasupport.MessageEnvelope
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
 import org.json4s._
-import org.json4s.native.Serialization._
+import org.json4s.jackson.Serialization._
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
@@ -25,6 +23,8 @@ import scala.util.Try
 
 package object messagedecoder {
   implicit val formats: DefaultFormats = DefaultFormats
+
+  import org.json4s.jackson.JsonMethods._
 
   val conf: Config = ConfigFactory.load
   implicit val system: ActorSystem = ActorSystem("message-decoder")
@@ -60,9 +60,7 @@ package object messagedecoder {
           val recordToSend = transform(messageEnvelope.payload) match {
             case scala.util.Success(value) =>
               system.log.debug(s"decoded: $value")
-              val transformedEnvelope = MessageEnvelope(
-                value, messageEnvelope.headers,
-                Some(Base64.getEncoder.encodeToString(messageEnvelope.payload)))
+              val transformedEnvelope = MessageEnvelope(value, messageEnvelope.headers)
               MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformedEnvelope)
             case scala.util.Failure(exception) =>
               system.log.error("error while decoding!", exception.getCause)
@@ -84,10 +82,12 @@ package object messagedecoder {
 
   def transform(payload: Array[Byte]): Try[String] = Try {
     val protocolMessage = payload(0) match {
-      case '{' => JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
-      case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
+      case '{' =>
+        JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+      case _ =>
+        MsgPackProtocolDecoder.getDecoder.decode(payload)
     }
 
-    new ObjectMapper().writeValueAsString(protocolMessage, payload)
+    mapper.writeValueAsString(protocolMessage)
   }
 }

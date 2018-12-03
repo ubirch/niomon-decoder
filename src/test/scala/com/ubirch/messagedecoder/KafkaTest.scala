@@ -31,9 +31,9 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val toVerifierMessages = toVerifierRecords.iterator()
     val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
     val msg = parse(decodedMessage.payload)
-    (msg \ "raw").extract[String] should equal("eyJ2ZXJzaW9uIjoxOH0=")
-    (msg \ "message" \ "version").extract[Int] should be(18)
-    (msg \ "message" \ "hint").extract[Int] should be(0)
+    (msg \ "signed").extractOpt should be(None)
+    (msg \ "version").extract[Int] should be(18)
+    (msg \ "hint").extract[Int] should be(0)
   }
 
   test("send an error message if json decoding fails") {
@@ -46,7 +46,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
     val errorMessages = toErrorsRecords.iterator()
     val errorMessage = MessageEnvelope.fromRecord(errorMessages.next())
-    (parse(errorMessage.payload) \ "error").extract[String] should equal("json decoding failed")
+    (parse(errorMessage.payload) \ "error").extract[String] should equal("extraction of signed data failed")
   }
 
   test("decode a simple msgpack message") {
@@ -60,11 +60,11 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val toVerifierMessages = toVerifierRecords.iterator()
     val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
     val msg = parse(decodedMessage.payload)
-    (msg \ "raw").extract[String] should equal("lRKwbqxNCxbmRQiMRiLnRR6loczvAdoAQFeKWyLOs+HQ0PiUfAmAEBM7RNOx0qs5h1j/7RFQe2B+03274Ab2RfDtD9vrG0i7UP1x2DI0DOAk1aDiHA68jg4=")
-    (msg \ "message" \ "version").extract[Int] should be(18)
-    (msg \ "message" \ "hint").extract[Int] should be(0xEF)
-    (msg \ "message" \ "uuid").extract[String] should equal("6eac4d0b-16e6-4508-8c46-22e7451ea5a1")
-    (msg \ "message" \ "payload").extract[Int] should be(1)
+    (msg \ "signed").extract[String] should equal("lRKwbqxNCxbmRQiMRiLnRR6loczvAQ==")
+    (msg \ "version").extract[Int] should be(18)
+    (msg \ "hint").extract[Int] should be(0xEF)
+    (msg \ "uuid").extract[String] should equal("6eac4d0b-16e6-4508-8c46-22e7451ea5a1")
+    (msg \ "payload").extract[Int] should be(1)
   }
 
   test("send an error message if msgpack decoding fails") {
