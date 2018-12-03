@@ -1,6 +1,7 @@
 package com.ubirch
 
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 import akka.Done
 import akka.actor.ActorSystem
@@ -12,7 +13,6 @@ import akka.stream.scaladsl.{Keep, RunnableGraph}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.kafkasupport.MessageEnvelope
-import com.ubirch.protocol.ProtocolMessageEnvelope
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
@@ -60,7 +60,9 @@ package object messagedecoder {
           val recordToSend = transform(messageEnvelope.payload) match {
             case scala.util.Success(value) =>
               system.log.debug(s"decoded: $value")
-              val transformedEnvelope = MessageEnvelope(value, messageEnvelope.headers)
+              val transformedEnvelope = MessageEnvelope(
+                value, messageEnvelope.headers,
+                Some(Base64.getEncoder.encodeToString(messageEnvelope.payload)))
               MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformedEnvelope)
             case scala.util.Failure(exception) =>
               system.log.error("error while decoding!", exception.getCause)
@@ -86,6 +88,6 @@ package object messagedecoder {
       case _ => MsgPackProtocolDecoder.getDecoder.decode(payload)
     }
 
-    new ObjectMapper().writeValueAsString(new ProtocolMessageEnvelope(protocolMessage, payload))
+    new ObjectMapper().writeValueAsString(protocolMessage, payload)
   }
 }
