@@ -2,13 +2,13 @@ package com.ubirch
 
 import java.nio.charset.StandardCharsets
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
 import akka.kafka._
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Consumer, Producer}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Keep, RunnableGraph}
+import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.scaladsl.{Keep, RestartSink, RestartSource, RunnableGraph, Sink, Source}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.ubirch.kafkasupport.MessageEnvelope
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
@@ -19,6 +19,7 @@ import org.json4s.jackson.Serialization._
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
 import scala.util.Try
 
 package object messagedecoder {
@@ -50,10 +51,23 @@ package object messagedecoder {
   val outgoingTopic: String = conf.getString("kafka.topic.outgoing")
   val errorsTopic: String = conf.getString("kafka.topic.errors")
 
+  val kafkaSource: Source[ConsumerMessage.CommittableMessage[String, Array[Byte]], NotUsed] =
+    RestartSource.withBackoff(
+      minBackoff = 2.seconds,
+      maxBackoff = 1.minute,
+      randomFactor = 0.2
+    ) { () => Consumer.committableSource(consumerSettings, Subscriptions.topics(incomingTopic)) }
 
-  val decoderStream: RunnableGraph[DrainingControl[Done]] =
-    Consumer
-      .committableSource(consumerSettings, Subscriptions.topics(incomingTopic))
+  val kafkaSink: Sink[ProducerMessage.Envelope[String, String, ConsumerMessage.Committable], NotUsed] =
+    RestartSink.withBackoff(
+      minBackoff = 2.seconds,
+      maxBackoff = 1.minute,
+      randomFactor = 0.2
+    ) { () => Producer.commitableSink(producerSettings) }
+
+  val decoderStream: RunnableGraph[UniqueKillSwitch] =
+    kafkaSource
+      .viaMat(KillSwitches.single)(Keep.right)
       .map {
         msg =>
           val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
@@ -76,8 +90,7 @@ package object messagedecoder {
             msg.committableOffset
           )
       }
-      .toMat(Producer.commitableSink(producerSettings))(Keep.both)
-      .mapMaterializedValue(DrainingControl.apply)
+      .to(kafkaSink)
 
 
   def transform(payload: Array[Byte]): Try[String] = Try {

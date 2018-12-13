@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import akka.Done
 import akka.kafka.scaladsl.Consumer
+import akka.stream.UniqueKillSwitch
 import cakesolutions.kafka.testkit.KafkaServer
 import cakesolutions.kafka.{KafkaConsumer, KafkaProducer}
 import com.ubirch.kafkasupport.MessageEnvelope
@@ -85,7 +86,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   val producer: KafkaProducer[String, Bytes] = createBytesProducer(kafkaServer.kafkaPort)
   val decodedConsumer = createStringConsumer(kafkaServer.kafkaPort, "1")
   val errorsConsumer = createStringConsumer(kafkaServer.kafkaPort, "2")
-  var stream: Consumer.DrainingControl[Done] = _
+  var stream: UniqueKillSwitch = _
 
 
   override def beforeAll(): Unit = {
@@ -97,12 +98,11 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   override def afterAll(): Unit = {
-    stream.shutdown().onComplete(_ => {
-      producer.close()
-      decodedConsumer.close()
-      errorsConsumer.close()
-      kafkaServer.close()
-    })
+    stream.shutdown()
+    producer.close()
+    decodedConsumer.close()
+    errorsConsumer.close()
+    kafkaServer.close()
   }
 
 
