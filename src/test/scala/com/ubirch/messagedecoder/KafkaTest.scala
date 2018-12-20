@@ -1,9 +1,8 @@
 package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
-import akka.Done
-import akka.kafka.scaladsl.Consumer
 import akka.stream.UniqueKillSwitch
 import cakesolutions.kafka.testkit.KafkaServer
 import cakesolutions.kafka.{KafkaConsumer, KafkaProducer}
@@ -66,6 +65,30 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     (msg \ "hint").extract[Int] should be(0xEF)
     (msg \ "uuid").extract[String] should equal("6eac4d0b-16e6-4508-8c46-22e7451ea5a1")
     (msg \ "payload").extract[Int] should be(1)
+  }
+
+  test("decode a msgpack message with binary payload") {
+    val msgpackData = Base64.getDecoder.decode("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgOfxEBs2Nmi5a1gN0E9vHeKI7IGogRKzuQrIHN/EyQYKOXCeIGGrcmEFipr3sB2R+u0GmPmZp+ASRyop1HergptSUcF")
+    val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
+    producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", msgEnvelope))
+
+    val toVerifierRecords = decodedConsumer.poll(5000)
+    toVerifierRecords.count() should be(1)
+
+    val toVerifierMessages = toVerifierRecords.iterator()
+    val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
+    val msg = parse(decodedMessage.payload)
+    (msg \ "version").extract[Int] should equal (19)
+    (msg \ "uuid").extract[String] should equal ("aef0a1ed-98be-430b-9833-f8703a912aa4")
+    (msg \ "chain").extract[String] should equal ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
+    (msg \ "hint").extract[Int] should equal (0)
+    (msg \ "signed").extract[String] should equal ("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgM=")
+    (msg \ "signature").extract[String] should equal ("bNjZouWtYDdBPbx3iiOyBqIESs7kKyBzfxMkGCjlwniBhq3JhBYqa97AdkfrtBpj5mafgEkcqKdR3q4KbUlHBQ==")
+
+    // binary payloads get deserialized as base64 strings
+    val p = (msg \ "payload").extract[String]
+    p should equal ("c29tZSBieXRlcyEAAQIDnw==")
+    Base64.getDecoder.decode(p) should equal ("some bytes!".getBytes(StandardCharsets.UTF_8) ++ Array[Byte](0, 1, 2, 3, 0x9f.toByte))
   }
 
   test("send an error message if msgpack decoding fails") {
