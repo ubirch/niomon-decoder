@@ -1,6 +1,7 @@
 package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 import java.util.Base64
 
 import akka.stream.UniqueKillSwitch
@@ -25,7 +26,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val binaryMessage = Bytes.wrap("{\"version\":18}".getBytes(StandardCharsets.UTF_8))
     producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", MessageEnvelope(binaryMessage)))
 
-    val toVerifierRecords = decodedConsumer.poll(5000)
+    val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
@@ -41,7 +42,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     producer.send(MessageEnvelope.toRecord("fromreceiver", "broken", MessageEnvelope(binaryMessage)))
     errorsConsumer.subscribe(List("errors").asJava)
 
-    val toErrorsRecords = errorsConsumer.poll(5000)
+    val toErrorsRecords = errorsConsumer.poll(Duration.ofSeconds(10))
     toErrorsRecords.count() should be(1)
 
     val errorMessages = toErrorsRecords.iterator()
@@ -54,7 +55,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
     producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", msgEnvelope))
 
-    val toVerifierRecords = decodedConsumer.poll(5000)
+    val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
@@ -72,7 +73,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
     producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", msgEnvelope))
 
-    val toVerifierRecords = decodedConsumer.poll(5000)
+    val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
@@ -97,7 +98,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     producer.send(MessageEnvelope.toRecord("fromreceiver", "broken", msgEnvelope))
     errorsConsumer.subscribe(List("errors").asJava)
 
-    val toErrorsRecords = errorsConsumer.poll(5000)
+    val toErrorsRecords = errorsConsumer.poll(Duration.ofSeconds(10))
     toErrorsRecords.count() should be(1)
 
     val errorMessages = toErrorsRecords.iterator()
