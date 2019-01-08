@@ -48,7 +48,6 @@
   <properties>
     <build.number>${timestamp}-dev</build.number>
     <kafka-support.version>1.0.0</kafka-support.version>
-    <ubirch-protocol-java.version>1.0.3</ubirch-protocol-java.version>
   </properties>
 
   <dependencies>
@@ -111,7 +110,7 @@
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-slf4j_${scala.major.version}</artifactId>
-      <version>2.5.16</version>
+      <version>${akka-slf4j.version}</version>
     </dependency>
 
     <!-- kafka -->
@@ -148,8 +147,8 @@
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
-      <artifactId>jackson-module-scala_2.12</artifactId>
-      <version>2.9.7</version>
+      <artifactId>jackson-module-scala_${scala.major.version}</artifactId>
+      <version>2.9.8</version>
     </dependency>
 
     <dependency>
