@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2019 ubirch GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
@@ -79,17 +95,17 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val toVerifierMessages = toVerifierRecords.iterator()
     val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
     val msg = parse(decodedMessage.payload)
-    (msg \ "version").extract[Int] should equal (19)
-    (msg \ "uuid").extract[String] should equal ("aef0a1ed-98be-430b-9833-f8703a912aa4")
-    (msg \ "chain").extract[String] should equal ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
-    (msg \ "hint").extract[Int] should equal (0)
-    (msg \ "signed").extract[String] should equal ("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgM=")
-    (msg \ "signature").extract[String] should equal ("bNjZouWtYDdBPbx3iiOyBqIESs7kKyBzfxMkGCjlwniBhq3JhBYqa97AdkfrtBpj5mafgEkcqKdR3q4KbUlHBQ==")
+    (msg \ "version").extract[Int] should equal(19)
+    (msg \ "uuid").extract[String] should equal("aef0a1ed-98be-430b-9833-f8703a912aa4")
+    (msg \ "chain").extract[String] should equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
+    (msg \ "hint").extract[Int] should equal(0)
+    (msg \ "signed").extract[String] should equal("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgM=")
+    (msg \ "signature").extract[String] should equal("bNjZouWtYDdBPbx3iiOyBqIESs7kKyBzfxMkGCjlwniBhq3JhBYqa97AdkfrtBpj5mafgEkcqKdR3q4KbUlHBQ==")
 
     // binary payloads get deserialized as base64 strings
     val p = (msg \ "payload").extract[String]
-    p should equal ("c29tZSBieXRlcyEAAQIDnw==")
-    Base64.getDecoder.decode(p) should equal ("some bytes!".getBytes(StandardCharsets.UTF_8) ++ Array[Byte](0, 1, 2, 3, 0x9f.toByte))
+    p should equal("c29tZSBieXRlcyEAAQIDnw==")
+    Base64.getDecoder.decode(p) should equal("some bytes!".getBytes(StandardCharsets.UTF_8) ++ Array[Byte](0, 1, 2, 3, 0x9f.toByte))
   }
 
   test("send an error message if msgpack decoding fails") {
@@ -121,6 +137,23 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     errorsConsumer.subscribe(List("errors").asJava)
   }
 
+  def createTopics(topicName: String*): Unit = {
+    val adminClient = createAdmin(kafkaServer.kafkaPort)
+    val topics = topicName.map(new NewTopic(_, 1, 1))
+    val createTopicsResult = adminClient.createTopics(topics.toList.asJava)
+    // finish futures
+    topicName.foreach(t => createTopicsResult.values.get(t).get())
+    adminClient.close()
+  }
+
+  private def createAdmin(kafkaPort: Int) = {
+    val configMap = Map[String, AnyRef](
+      AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:$kafkaPort",
+      AdminClientConfig.CLIENT_ID_CONFIG -> "admin",
+    )
+    AdminClient.create(configMap.asJava)
+  }
+
   override def afterAll(): Unit = {
     stream.shutdown()
     producer.close()
@@ -128,7 +161,6 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     errorsConsumer.close()
     kafkaServer.close()
   }
-
 
   private def createStringConsumer(kafkaPort: Int, groupId: String) = {
     KafkaConsumer(
@@ -160,23 +192,6 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
       KafkaProducer.Conf(new StringSerializer(), new BytesSerializer(),
         bootstrapServers = s"localhost:$kafkaPort",
         acks = "all"))
-  }
-
-  def createTopics(topicName: String*): Unit = {
-    val adminClient = createAdmin(kafkaServer.kafkaPort)
-    val topics = topicName.map(new NewTopic(_, 1, 1))
-    val createTopicsResult = adminClient.createTopics(topics.toList.asJava)
-    // finish futures
-    topicName.foreach(t => createTopicsResult.values.get(t).get())
-    adminClient.close()
-  }
-
-  private def createAdmin(kafkaPort: Int) = {
-    val configMap = Map[String, AnyRef](
-      AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG -> s"localhost:$kafkaPort",
-      AdminClientConfig.CLIENT_ID_CONFIG -> "admin",
-    )
-    AdminClient.create(configMap.asJava)
   }
 
 }
