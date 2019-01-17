@@ -339,7 +339,6 @@
                 <version>1.0.0</version>
                 <configuration>
                     <includeTestSourceDirectory combine.self="override">false</includeTestSourceDirectory>
-                    <testSourceDirectory/>
                 </configuration>
             </plugin>
         </plugins>
