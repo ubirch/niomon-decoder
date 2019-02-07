@@ -23,11 +23,11 @@ import java.util.Base64
 import akka.stream.UniqueKillSwitch
 import cakesolutions.kafka.testkit.KafkaServer
 import cakesolutions.kafka.{KafkaConsumer, KafkaProducer}
-import com.ubirch.kafkasupport.MessageEnvelope
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.clients.admin.{AdminClient, AdminClientConfig, NewTopic}
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
-import org.apache.kafka.common.serialization.{BytesDeserializer, BytesSerializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.{BytesSerializer, StringDeserializer, StringSerializer}
 import org.apache.kafka.common.utils.Bytes
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -40,14 +40,14 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   test("decode a simple json message") {
     val binaryMessage = Bytes.wrap("{\"version\":18}".getBytes(StandardCharsets.UTF_8))
-    producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", MessageEnvelope(binaryMessage)))
+    producer.send(new ProducerRecord("fromreceiver", "valid", binaryMessage))
 
     val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
-    val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
-    val msg = parse(decodedMessage.payload)
+    val decodedMessage = toVerifierMessages.next()
+    val msg = parse(decodedMessage.value()) \ "ubirchPacket"
     (msg \ "signed").extractOpt should be(None)
     (msg \ "version").extract[Int] should be(18)
     (msg \ "hint").extract[Int] should be(0)
@@ -55,28 +55,28 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   test("send an error message if json decoding fails") {
     val binaryMessage = Bytes.wrap("{broken}".getBytes(StandardCharsets.UTF_8))
-    producer.send(MessageEnvelope.toRecord("fromreceiver", "broken", MessageEnvelope(binaryMessage)))
+    producer.send(new ProducerRecord("fromreceiver", "broken", binaryMessage))
     errorsConsumer.subscribe(List("errors").asJava)
 
     val toErrorsRecords = errorsConsumer.poll(Duration.ofSeconds(10))
     toErrorsRecords.count() should be(1)
 
     val errorMessages = toErrorsRecords.iterator()
-    val errorMessage = MessageEnvelope.fromRecord(errorMessages.next())
-    (parse(errorMessage.payload) \ "error").extract[String] should equal("extraction of signed data failed")
+    val errorMessage = errorMessages.next()
+    (parse(errorMessage.value()) \ "error").extract[String] should equal("extraction of signed data failed")
   }
 
   test("decode a simple msgpack message") {
     val msgpackData = Hex.decodeHex("9512b06eac4d0b16e645088c4622e7451ea5a1ccef01da0040578a5b22ceb3e1d0d0f8947c098010133b44d3b1d2ab398758ffed11507b607ed37dbbe006f645f0ed0fdbeb1b48bb50fd71d832340ce024d5a0e21c0ebc8e0e".toCharArray)
-    val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
-    producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", msgEnvelope))
+    val msgEnvelope = Bytes.wrap(msgpackData)
+    producer.send(new ProducerRecord("fromreceiver", "valid", msgEnvelope))
 
     val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
-    val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
-    val msg = parse(decodedMessage.payload)
+    val decodedMessage = toVerifierMessages.next()
+    val msg = parse(decodedMessage.value()) \ "ubirchPacket"
     (msg \ "signed").extract[String] should equal("lRKwbqxNCxbmRQiMRiLnRR6loczvAQ==")
     (msg \ "version").extract[Int] should be(18)
     (msg \ "hint").extract[Int] should be(0xEF)
@@ -86,15 +86,15 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   test("decode a msgpack message with binary payload") {
     val msgpackData = Base64.getDecoder.decode("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgOfxEBs2Nmi5a1gN0E9vHeKI7IGogRKzuQrIHN/EyQYKOXCeIGGrcmEFipr3sB2R+u0GmPmZp+ASRyop1HergptSUcF")
-    val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
-    producer.send(MessageEnvelope.toRecord("fromreceiver", "valid", msgEnvelope))
+    val msgEnvelope = Bytes.wrap(msgpackData)
+    producer.send(new ProducerRecord("fromreceiver", "valid", msgEnvelope))
 
     val toVerifierRecords = decodedConsumer.poll(Duration.ofSeconds(10))
     toVerifierRecords.count() should be(1)
 
     val toVerifierMessages = toVerifierRecords.iterator()
-    val decodedMessage = MessageEnvelope.fromRecord(toVerifierMessages.next())
-    val msg = parse(decodedMessage.payload)
+    val decodedMessage = toVerifierMessages.next()
+    val msg = parse(decodedMessage.value()) \ "ubirchPacket"
     (msg \ "version").extract[Int] should equal(19)
     (msg \ "uuid").extract[String] should equal("aef0a1ed-98be-430b-9833-f8703a912aa4")
     (msg \ "chain").extract[String] should equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
@@ -110,16 +110,16 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   test("send an error message if msgpack decoding fails") {
     val msgpackData = Hex.decodeHex("FF3344".toCharArray)
-    val msgEnvelope = MessageEnvelope(Bytes.wrap(msgpackData))
-    producer.send(MessageEnvelope.toRecord("fromreceiver", "broken", msgEnvelope))
+    val msgEnvelope = Bytes.wrap(msgpackData)
+    producer.send(new ProducerRecord("fromreceiver", "broken", msgEnvelope))
     errorsConsumer.subscribe(List("errors").asJava)
 
     val toErrorsRecords = errorsConsumer.poll(Duration.ofSeconds(10))
     toErrorsRecords.count() should be(1)
 
     val errorMessages = toErrorsRecords.iterator()
-    val errorMessage = MessageEnvelope.fromRecord(errorMessages.next())
-    (parse(errorMessage.payload) \ "error").extract[String] should equal("msgpack decoding failed")
+    val errorMessage = errorMessages.next()
+    (parse(errorMessage.value()) \ "error").extract[String] should equal("msgpack decoding failed")
   }
 
   val kafkaServer = new KafkaServer(9892)
@@ -169,22 +169,6 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
         groupId = groupId,
         autoOffsetReset = OffsetResetStrategy.EARLIEST)
     )
-  }
-
-  private def createBytesConsumer(kafkaPort: Int, groupId: String) = {
-    KafkaConsumer(
-      KafkaConsumer.Conf(new StringDeserializer(), new BytesDeserializer(),
-        bootstrapServers = s"localhost:$kafkaPort",
-        groupId = groupId,
-        autoOffsetReset = OffsetResetStrategy.EARLIEST)
-    )
-  }
-
-  private def createStringProducer(kafkaPort: Int) = {
-    KafkaProducer(
-      KafkaProducer.Conf(new StringSerializer(), new StringSerializer(),
-        bootstrapServers = s"localhost:$kafkaPort",
-        acks = "all"))
   }
 
   private def createBytesProducer(kafkaPort: Int) = {

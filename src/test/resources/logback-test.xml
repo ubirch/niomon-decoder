@@ -32,8 +32,9 @@
     <logger name="org.apache.kafka" level="WARN"/>
     <logger name="kafka" level="WARN"/>
     <logger name="org.apache.zookeeper" level="WARN"/>
+    <logger name="com.ubirch.messagedecoder" level="DEBUG"/>
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="STDERR"/>
     </root>
 </configuration>

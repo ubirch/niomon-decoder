@@ -25,9 +25,12 @@ import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.scaladsl.{Keep, RestartSink, RestartSource, RunnableGraph, Sink, Source}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import com.typesafe.config.{Config, ConfigFactory}
-import com.ubirch.kafkasupport.MessageEnvelope
+import com.ubirch.kafka.MessageEnvelope
+import com.ubirch.kafka._
+import com.ubirch.protocol.ProtocolMessage
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 import org.json4s.jackson.Serialization._
@@ -39,8 +42,6 @@ import scala.util.Try
 
 package object messagedecoder {
   implicit val formats: DefaultFormats = DefaultFormats
-
-  import org.json4s.jackson.JsonMethods._
 
   val conf: Config = ConfigFactory.load
   implicit val system: ActorSystem = ActorSystem("message-decoder")
@@ -83,39 +84,37 @@ package object messagedecoder {
   val decoderStream: RunnableGraph[UniqueKillSwitch] =
     kafkaSource
       .viaMat(KillSwitches.single)(Keep.right)
-      .map {
-        msg =>
-          val messageEnvelope = MessageEnvelope.fromRecord(msg.record)
-          val recordToSend = transform(messageEnvelope.payload) match {
-            case scala.util.Success(value) =>
-              system.log.debug(s"decoded: $value")
-              val transformedEnvelope = MessageEnvelope(value, messageEnvelope.headers)
-              MessageEnvelope.toRecord(outgoingTopic, msg.record.key(), transformedEnvelope)
-            case scala.util.Failure(exception) =>
-              system.log.error("error while decoding!", exception.getCause)
-              val error = mutable.HashMap("error" -> exception.getMessage)
-              if (exception.getCause != null) error("cause") = exception.getCause.getMessage
+      .map { msg =>
+        val recordToSend = transform(msg.record.value()) match {
+          case scala.util.Success(value) =>
+            system.log.debug(s"decoded: $value")
+            val transformedEnvelope = MessageEnvelope(value)
+            val payload = EnvelopeSerializer.serializeToString(transformedEnvelope)
 
-              val errorEnvelope = MessageEnvelope(write(error), messageEnvelope.headers)
-              MessageEnvelope.toRecord(errorsTopic, msg.record.key(), errorEnvelope)
-          }
+            // the type ascription is technically unnecessary, but idea complains if it isn't there
+            msg.record.toProducerRecord(outgoingTopic).copy(value = payload): ProducerRecord[String, String]
+          case scala.util.Failure(exception) =>
+            system.log.error("error while decoding!", exception.getCause)
+            val error = mutable.HashMap("error" -> exception.getMessage)
+            if (exception.getCause != null) error("cause") = exception.getCause.getMessage
+            // the type ascription is technically unnecessary, but idea complains if it isn't there
+            msg.record.toProducerRecord(errorsTopic).copy(value = write(error)): ProducerRecord[String, String]
+        }
 
-          ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
-            recordToSend,
-            msg.committableOffset
-          )
+        ProducerMessage.Message[String, String, ConsumerMessage.CommittableOffset](
+          recordToSend, // ignore IDEA here, this compiles
+          msg.committableOffset
+        )
       }
       .to(kafkaSink)
 
 
-  def transform(payload: Array[Byte]): Try[String] = Try {
-    val protocolMessage = payload(0) match {
+  def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
+    payload(0) match {
       case '{' =>
         JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
       case _ =>
         MsgPackProtocolDecoder.getDecoder.decode(payload)
     }
-
-    mapper.writeValueAsString(protocolMessage)
   }
 }

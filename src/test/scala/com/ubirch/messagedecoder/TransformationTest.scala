@@ -23,6 +23,6 @@ class TransformationTest extends FlatSpec with Matchers {
   "Message Payload Transformation" should "transform empty message" in {
     val result = transform("{}".getBytes)
     result.isSuccess shouldBe true
-    result.get should equal("{\"version\":0,\"hint\":0}")
+    result.get.toString should equal("ProtocolMessage(v=0x0000,hint=0x00)")
   }
 }
