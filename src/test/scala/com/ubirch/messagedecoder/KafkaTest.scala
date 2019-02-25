@@ -49,7 +49,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val decodedMessage = toVerifierMessages.next()
     val msg = parse(decodedMessage.value()) \ "ubirchPacket"
     (msg \ "signed").extractOpt should be(None)
-    (msg \ "version").extract[Int] should be(18)
+    (msg \ "version").extract[Int] should be(34)
     (msg \ "hint").extract[Int] should be(0)
   }
 
@@ -78,7 +78,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val decodedMessage = toVerifierMessages.next()
     val msg = parse(decodedMessage.value()) \ "ubirchPacket"
     (msg \ "signed").extract[String] should equal("lRKwbqxNCxbmRQiMRiLnRR6loczvAQ==")
-    (msg \ "version").extract[Int] should be(18)
+    (msg \ "version").extract[Int] should be(34)
     (msg \ "hint").extract[Int] should be(0xEF)
     (msg \ "uuid").extract[String] should equal("6eac4d0b-16e6-4508-8c46-22e7451ea5a1")
     (msg \ "payload").extract[Int] should be(1)
@@ -95,7 +95,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val toVerifierMessages = toVerifierRecords.iterator()
     val decodedMessage = toVerifierMessages.next()
     val msg = parse(decodedMessage.value()) \ "ubirchPacket"
-    (msg \ "version").extract[Int] should equal(19)
+    (msg \ "version").extract[Int] should equal(35)
     (msg \ "uuid").extract[String] should equal("aef0a1ed-98be-430b-9833-f8703a912aa4")
     (msg \ "chain").extract[String] should equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
     (msg \ "hint").extract[Int] should equal(0)

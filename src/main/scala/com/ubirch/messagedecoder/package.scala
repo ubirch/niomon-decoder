@@ -88,6 +88,13 @@ package object messagedecoder {
         val recordToSend = transform(msg.record.value()) match {
           case scala.util.Success(value) =>
             system.log.debug(s"decoded: $value")
+
+            // signer down the line doesn't support the legacy version, so we're upgrading the version here
+            if ((value.getVersion >> 4) == 1) {
+              system.log.debug("detected old version of protocol, upgrading")
+              value.setVersion((ProtocolMessage.ubirchProtocolVersion << 4) | (value.getVersion & 0x0f))
+            }
+
             val transformedEnvelope = MessageEnvelope(value)
             val payload = EnvelopeSerializer.serializeToString(transformedEnvelope)
 
