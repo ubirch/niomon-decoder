@@ -25,6 +25,7 @@ import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.scaladsl.{Keep, RestartSink, RestartSource, RunnableGraph, Sink, Source}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.kafka.MessageEnvelope
 import com.ubirch.kafka._
 import com.ubirch.protocol.ProtocolMessage
@@ -40,7 +41,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.util.Try
 
-package object messagedecoder {
+package object messagedecoder extends StrictLogging {
   implicit val formats: DefaultFormats = DefaultFormats
 
   val conf: Config = ConfigFactory.load
@@ -87,11 +88,11 @@ package object messagedecoder {
       .map { msg =>
         val recordToSend = transform(msg.record.value()) match {
           case scala.util.Success(value) =>
-            system.log.debug(s"decoded: $value")
+            logger.debug(s"decoded: $value")
 
             // signer down the line doesn't support the legacy version, so we're upgrading the version here
             if ((value.getVersion >> 4) == 1) {
-              system.log.debug("detected old version of protocol, upgrading")
+              logger.debug("detected old version of protocol, upgrading")
               value.setVersion((ProtocolMessage.ubirchProtocolVersion << 4) | (value.getVersion & 0x0f))
             }
 
@@ -101,7 +102,7 @@ package object messagedecoder {
             // the type ascription is technically unnecessary, but idea complains if it isn't there
             msg.record.toProducerRecord(outgoingTopic).copy(value = payload): ProducerRecord[String, String]
           case scala.util.Failure(exception) =>
-            system.log.error("error while decoding!", exception.getCause)
+            logger.error("error while decoding!", exception.getCause)
             val error = mutable.HashMap("error" -> exception.getMessage)
             if (exception.getCause != null) error("cause") = exception.getCause.getMessage
             // the type ascription is technically unnecessary, but idea complains if it isn't there
@@ -112,8 +113,10 @@ package object messagedecoder {
           recordToSend, // ignore IDEA here, this compiles
           msg.committableOffset
         )
-      }
-      .to(kafkaSink)
+      }.mapError { case e =>
+        logger.error("unexpected error in the decoder flow", e)
+        e
+      }.to(kafkaSink)
 
 
   def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
