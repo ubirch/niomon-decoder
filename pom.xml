@@ -47,7 +47,6 @@
 
     <properties>
         <build.number>${timestamp}-dev</build.number>
-        <kafka-support.version>1.0.0</kafka-support.version>
     </properties>
 
     <dependencies>
@@ -151,11 +150,6 @@
             <version>2.9.8</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.velvia</groupId>
-            <artifactId>msgpack4s_${scala.major.version}</artifactId>
-            <version>${msgpack4s.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.jvm.uuid</groupId>
             <artifactId>scala-uuid_${scala.major.version}</artifactId>
@@ -318,11 +312,6 @@
     </build>
 
     <repositories>
-        <repository>
-            <id>org.velvia</id>
-            <name>msgpack4s repository</name>
-            <url>http://dl.bintray.com/velvia/maven</url>
-        </repository>
         <!-- simple kafka client -->
         <repository>
             <id>bintray-cakesolutions-maven</id>
