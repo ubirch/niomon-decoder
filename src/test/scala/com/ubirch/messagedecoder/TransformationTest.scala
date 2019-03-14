@@ -18,6 +18,8 @@ package com.ubirch.messagedecoder
 
 import org.scalatest.{FlatSpec, Matchers}
 
+import MessageDecoderMicroservice._
+
 class TransformationTest extends FlatSpec with Matchers {
 
   "Message Payload Transformation" should "transform empty message" in {
