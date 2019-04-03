@@ -18,6 +18,6 @@ package com.ubirch.messagedecoder
 
 object Main {
   def main(args: Array[String]) {
-    new MessageDecoderMicroservice().runUntilDone
+    new MessageDecoderMicroservice().runUntilDoneAndShutdownProcess
   }
 }
