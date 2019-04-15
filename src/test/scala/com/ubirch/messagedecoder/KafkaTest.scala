@@ -55,7 +55,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with Embed
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorsMessages.size should be(1)
 
-    toErrorsMessages.head should equal("""{"error":"ProtocolException: extraction of signed data failed","causes":["JsonParseException: Unexpected character ('b' (code 98)): was expecting double-quote to start field name\n at [Source: (String)\"{broken}\"; line: 1, column: 3]"]}""")
+    toErrorsMessages.head should equal("""{"error":"ProtocolException: extraction of signed data failed","causes":["JsonParseException: Unexpected character ('b' (code 98)): was expecting double-quote to start field name\n at [Source: (String)\"{broken}\"; line: 1, column: 3]"],"microservice":"message-decoder","requestId":"broken"}""")
   }
 
   test("decode a simple msgpack message") {
@@ -102,7 +102,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with Embed
     toErrorsMessages.size should be(1)
 
     toErrorsMessages.head should equal(
-      """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"]}""")
+      """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"],"microservice":"message-decoder","requestId":"broken"}""")
   }
 
   var microservice: MessageDecoderMicroservice = _
