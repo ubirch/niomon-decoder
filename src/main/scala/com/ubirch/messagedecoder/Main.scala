@@ -17,7 +17,7 @@
 package com.ubirch.messagedecoder
 
 object Main {
-  def main(args: Array[String]) {
-    new MessageDecoderMicroservice().runUntilDoneAndShutdownProcess
+  def main(args: Array[String]): Unit = {
+    val _ = new MessageDecoderMicroservice().runUntilDoneAndShutdownProcess
   }
 }

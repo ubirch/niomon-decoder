@@ -22,7 +22,6 @@ import java.util.Base64
 import akka.Done
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s._
@@ -59,7 +58,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with Embed
   }
 
   test("decode a simple msgpack message") {
-    val msgpackData = Hex.decodeHex("9512b06eac4d0b16e645088c4622e7451ea5a1ccef01da0040578a5b22ceb3e1d0d0f8947c098010133b44d3b1d2ab398758ffed11507b607ed37dbbe006f645f0ed0fdbeb1b48bb50fd71d832340ce024d5a0e21c0ebc8e0e".toCharArray)
+    val msgpackData = Base64.getDecoder.decode("lRKwbqxNCxbmRQiMRiLnRR6loczvAdoAQFeKWyLOs+HQ0PiUfAmAEBM7RNOx0qs5h1j/7RFQe2B+03274Ab2RfDtD9vrG0i7UP1x2DI0DOAk1aDiHA68jg4=")
     publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
@@ -95,7 +94,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with Embed
   }
 
   test("send an error message if msgpack decoding fails") {
-    val msgpackData = Hex.decodeHex("FF3344".toCharArray)
+    val msgpackData = Base64.getDecoder.decode("/zNE")
     publishToKafka(new ProducerRecord("fromreceiver", "broken", msgpackData))
 
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
