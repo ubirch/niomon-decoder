@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import com.ubirch.kafka.MessageEnvelope
 import com.ubirch.messagedecoder.MessageDecoderMicroservice._
-import com.ubirch.niomon.base.NioMicroservice
+import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import com.ubirch.niomon.base.NioMicroservice.WithHttpStatus
 import com.ubirch.protocol.{ProtocolException, ProtocolMessage}
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
@@ -12,7 +12,8 @@ import org.json4s.DefaultFormats
 
 import scala.util.Try
 
-class MessageDecoderMicroservice extends NioMicroservice[Array[Byte], MessageEnvelope]("message-decoder") {
+class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEnvelope])
+  extends NioMicroserviceLogic.Simple[Array[Byte], MessageEnvelope](runtime) {
   implicit val formats: DefaultFormats = DefaultFormats
 
   override def process(input: Array[Byte]): (MessageEnvelope, String) = {
@@ -32,6 +33,9 @@ class MessageDecoderMicroservice extends NioMicroservice[Array[Byte], MessageEnv
 }
 
 object MessageDecoderMicroservice {
+  def apply(runtime: NioMicroservice[Array[Byte], MessageEnvelope]): MessageDecoderMicroservice =
+    new MessageDecoderMicroservice(runtime)
+
   def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
     payload(0) match {
       case '{' =>

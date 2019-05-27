@@ -19,9 +19,7 @@ package com.ubirch.messagedecoder
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-import akka.Done
-import akka.kafka.scaladsl.Consumer.DrainingControl
-import net.manub.embeddedkafka.EmbeddedKafka
+import com.ubirch.niomon.base.NioMicroserviceMock
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s._
@@ -29,7 +27,13 @@ import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 //noinspection TypeAnnotation
-class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with EmbeddedKafka {
+class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
+  val microservice = NioMicroserviceMock(MessageDecoderMicroservice(_))
+  microservice.name = "message-decoder"
+  microservice.outputTopics = Map("valid" -> "toverifier")
+  microservice.errorTopic = Some("errors")
+  import microservice.kafkaMocks._
+
   implicit val formats = DefaultFormats
   implicit val bytesSerializer = new ByteArraySerializer
 
@@ -102,19 +106,5 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll with Embed
 
     toErrorsMessages.head should equal(
       """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"],"microservice":"message-decoder","requestId":"broken"}""")
-  }
-
-  var microservice: MessageDecoderMicroservice = _
-  var microserviceControl: DrainingControl[Done] = _
-
-  override def beforeAll(): Unit = {
-    EmbeddedKafka.start()
-    microservice = new MessageDecoderMicroservice()
-    microserviceControl = microservice.run
-  }
-
-  override def afterAll(): Unit = {
-    microserviceControl.drainAndShutdown()(microservice.system.dispatcher)
-    EmbeddedKafka.stop()
   }
 }
