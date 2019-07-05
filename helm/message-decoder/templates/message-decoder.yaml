@@ -1,0 +1,19 @@
+{{- define "message-decoder.env" -}}
+- name: KAFKA_TOPIC_IN
+  value: "binary.authorized"
+- name: KAFKA_TOPIC_OUT_VALID
+  value: "json.decoded"
+- name: KAFKA_TOPIC_OUT_INVALID
+  value: "niomon.error"
+{{- end -}}
+
+{{- $deployment := (dict "envStr" (include "message-decoder.env" .)) -}}
+
+{{- $_ := set $deployment "Root" . -}}
+{{- $_ := set $deployment "name" "message-decoder" -}}
+
+{{ template "niomon.deployment" $deployment }}
+
+---
+
+{{ template "niomon.service" $deployment }}
