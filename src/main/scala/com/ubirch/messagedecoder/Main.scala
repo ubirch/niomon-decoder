@@ -21,6 +21,6 @@ import com.ubirch.niomon.base.NioMicroserviceLive
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val _ = NioMicroserviceLive("message-decoder", MessageDecoderMicroservice(_)).runUntilDoneAndShutdownProcess
+    val _ = NioMicroserviceLive("niomon-decoder", MessageDecoderMicroservice(_)).runUntilDoneAndShutdownProcess
   }
 }

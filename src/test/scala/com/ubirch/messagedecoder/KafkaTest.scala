@@ -29,7 +29,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 //noinspection TypeAnnotation
 class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   val microservice = NioMicroserviceMock(MessageDecoderMicroservice(_))
-  microservice.name = "message-decoder"
+  microservice.name = "niomon-decoder"
   microservice.outputTopics = Map("valid" -> "toverifier")
   microservice.errorTopic = Some("errors")
   import microservice.kafkaMocks._
@@ -58,7 +58,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorsMessages.size should be(1)
 
-    toErrorsMessages.head should equal("""{"error":"ProtocolException: extraction of signed data failed","causes":["JsonParseException: Unexpected character ('b' (code 98)): was expecting double-quote to start field name\n at [Source: (String)\"{broken}\"; line: 1, column: 3]"],"microservice":"message-decoder","requestId":"broken"}""")
+    toErrorsMessages.head should equal("""{"error":"ProtocolException: extraction of signed data failed","causes":["JsonParseException: Unexpected character ('b' (code 98)): was expecting double-quote to start field name\n at [Source: (String)\"{broken}\"; line: 1, column: 3]"],"microservice":"niomon-decoder","requestId":"broken"}""")
   }
 
   test("decode a simple msgpack message") {
@@ -105,6 +105,6 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     toErrorsMessages.size should be(1)
 
     toErrorsMessages.head should equal(
-      """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"],"microservice":"message-decoder","requestId":"broken"}""")
+      """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"],"microservice":"niomon-decoder","requestId":"broken"}""")
   }
 }
