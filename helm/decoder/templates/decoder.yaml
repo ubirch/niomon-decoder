@@ -10,7 +10,7 @@
 {{- $deployment := (dict "envStr" (include "niomon-decoder.env" .)) -}}
 
 {{- $_ := set $deployment "Root" . -}}
-{{- $_ := set $deployment "name" "niomon-decoder" -}}
+{{- $_ := set $deployment "name" "decoder" -}}
 
 {{ template "niomon.deployment" $deployment }}
 
