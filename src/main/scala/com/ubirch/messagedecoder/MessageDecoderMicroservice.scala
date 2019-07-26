@@ -2,33 +2,37 @@ package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
 
-import com.ubirch.kafka.MessageEnvelope
+import com.ubirch.kafka.{MessageEnvelope, _}
 import com.ubirch.messagedecoder.MessageDecoderMicroservice._
-import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import com.ubirch.niomon.base.NioMicroservice.WithHttpStatus
-import com.ubirch.protocol.{ProtocolException, ProtocolMessage}
+import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import com.ubirch.protocol.codec.{JSONProtocolDecoder, MsgPackProtocolDecoder}
+import com.ubirch.protocol.{ProtocolException, ProtocolMessage}
+import net.logstash.logback.argument.StructuredArguments.v
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.json4s.DefaultFormats
 
 import scala.util.Try
 
+
 class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEnvelope])
-  extends NioMicroserviceLogic.Simple[Array[Byte], MessageEnvelope](runtime) {
+  extends NioMicroserviceLogic[Array[Byte], MessageEnvelope](runtime) {
   implicit val formats: DefaultFormats = DefaultFormats
 
-  override def process(input: Array[Byte]): (MessageEnvelope, String) = {
-    val value = try transform(input).get catch {
+  override def processRecord(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
+    val value = try transform(input.value()).get catch {
       case pe: ProtocolException => throw WithHttpStatus(400, pe)
     }
-    logger.debug(s"decoded: $value")
+    logger.debug(s"decoded: $value", v("requestId", input.key()))
 
     // signer down the line doesn't support the legacy version, so we're upgrading the version here
     if ((value.getVersion >> 4) == 1) {
-      logger.debug("detected old version of protocol, upgrading")
+      logger.debug("detected old version of protocol, upgrading", v("requestId", input.key))
       value.setVersion((ProtocolMessage.ubirchProtocolVersion << 4) | (value.getVersion & 0x0f))
     }
 
-    MessageEnvelope(value) -> "valid"
+    input.toProducerRecord(outputTopics("valid"), MessageEnvelope(value))
   }
 }
 
