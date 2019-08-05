@@ -24,11 +24,11 @@ class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEn
     val value = try transform(input.value()).get catch {
       case pe: ProtocolException => throw WithHttpStatus(400, pe)
     }
-    logger.debug(s"decoded: $value", v("requestId", input.key()))
+    logger.info(s"decoded: $value", v("requestId", input.key()))
 
     // signer down the line doesn't support the legacy version, so we're upgrading the version here
     if ((value.getVersion >> 4) == 1) {
-      logger.debug("detected old version of protocol, upgrading", v("requestId", input.key))
+      logger.warn("detected old version of protocol, upgrading", v("requestId", input.key))
       value.setVersion((ProtocolMessage.ubirchProtocolVersion << 4) | (value.getVersion & 0x0f))
     }
 
