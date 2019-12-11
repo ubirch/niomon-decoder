@@ -1,5 +1,4 @@
 /target
-/Dockerfile
 /*.iml
 /helm/decoder/templates/_helpers.yaml
 /helm/decoder/.helmignore
