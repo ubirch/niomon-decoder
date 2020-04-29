@@ -16,9 +16,8 @@
 
 package com.ubirch.messagedecoder
 
+import com.ubirch.messagedecoder.MessageDecoderMicroservice._
 import org.scalatest.{FlatSpec, Matchers}
-
-import MessageDecoderMicroservice._
 
 class TransformationTest extends FlatSpec with Matchers {
 
