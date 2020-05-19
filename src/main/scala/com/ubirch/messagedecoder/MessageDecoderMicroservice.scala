@@ -35,8 +35,11 @@ class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEn
     }
 
     try {
-      val hash = pm.getPayload.asText().getBytes(StandardCharsets.UTF_8)
-      uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
+      val payload = pm.getPayload
+      if(payload != null){
+        val hash = payload.asText().getBytes(StandardCharsets.UTF_8)
+        uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
+      }
     } catch {
       case ex: Throwable => logger.error("couldn't store upp to cache", ex)
     }
