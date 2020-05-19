@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 import com.typesafe.config.ConfigFactory
+import com.ubirch.niomon.base.NioMicroserviceMock
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s._
