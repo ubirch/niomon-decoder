@@ -34,8 +34,12 @@ class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEn
       case pe: ProtocolException => throw WithHttpStatus(400, pe)
     }
 
-    val hash = pm.getPayload.asText().getBytes(StandardCharsets.UTF_8)
-    uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
+    try {
+      val hash = pm.getPayload.asText().getBytes(StandardCharsets.UTF_8)
+      uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
+    } catch {
+      case ex: Throwable => logger.error("couldn't store upp to cache", ex)
+    }
     logger.info(s"decoded: $pm", v("requestId", input.key()))
 
     // signer down the line doesn't support the legacy version, so we're upgrading the version here

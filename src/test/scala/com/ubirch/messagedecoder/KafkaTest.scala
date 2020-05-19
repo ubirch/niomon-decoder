@@ -19,7 +19,7 @@ package com.ubirch.messagedecoder
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-import com.ubirch.niomon.base.NioMicroserviceMock
+import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s._
@@ -28,11 +28,12 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 //noinspection TypeAnnotation
 class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
+
   val microservice = NioMicroserviceMock(MessageDecoderMicroservice(_))
   microservice.name = "niomon-decoder"
   microservice.outputTopics = Map("valid" -> "toverifier")
   microservice.errorTopic = Some("errors")
-  import microservice.kafkaMocks._
+  microservice.config = ConfigFactory.load().getConfig("niomon-decoder")
 
   implicit val formats = DefaultFormats
   implicit val bytesSerializer = new ByteArraySerializer
