@@ -35,6 +35,8 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   microservice.errorTopic = Some("errors")
   microservice.config = ConfigFactory.load().getConfig("niomon-decoder")
 
+  import microservice.kafkaMocks._
+
   implicit val formats = DefaultFormats
   implicit val bytesSerializer = new ByteArraySerializer
 
