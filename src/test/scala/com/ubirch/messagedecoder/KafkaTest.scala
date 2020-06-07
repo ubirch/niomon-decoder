@@ -17,9 +17,10 @@
 package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
+import java.util.{Base64, UUID}
 
 import com.typesafe.config.ConfigFactory
+import com.ubirch.kafka.RichAnyProducerRecord
 import com.ubirch.niomon.base.NioMicroserviceMock
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
@@ -42,8 +43,13 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   implicit val bytesSerializer = new ByteArraySerializer
 
   test("decode a simple json message") {
-    val binaryMessage = "{\"version\":18}".getBytes(StandardCharsets.UTF_8)
-    publishToKafka(new ProducerRecord("fromreceiver", "valid", binaryMessage))
+
+    val requestId = UUID.randomUUID()
+    val hardwareId = "d9ea390e-b202-4ff6-92fb-8ca9142426ea"
+    val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\", \"payload\":1}".getBytes(StandardCharsets.UTF_8)
+
+    publishToKafka(new ProducerRecord("fromreceiver", requestId.toString, binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
 
@@ -66,8 +72,10 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("decode a simple msgpack message") {
+    val hardwareId = "6eac4d0b-16e6-4508-8c46-22e7451ea5a1"
     val msgpackData = Base64.getDecoder.decode("lRKwbqxNCxbmRQiMRiLnRR6loczvAdoAQFeKWyLOs+HQ0PiUfAmAEBM7RNOx0qs5h1j/7RFQe2B+03274Ab2RfDtD9vrG0i7UP1x2DI0DOAk1aDiHA68jg4=")
-    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData))
+    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
     toVerifierMessages.size should be(1)
@@ -81,8 +89,10 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("decode a msgpack message with binary payload") {
+    val hardwareId = "aef0a1ed-98be-430b-9833-f8703a912aa4"
     val msgpackData = Base64.getDecoder.decode("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgOfxEBs2Nmi5a1gN0E9vHeKI7IGogRKzuQrIHN/EyQYKOXCeIGGrcmEFipr3sB2R+u0GmPmZp+ASRyop1HergptSUcF")
-    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData))
+    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
     toVerifierMessages.size should be(1)
@@ -111,4 +121,49 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     toErrorsMessages.head should equal(
       """{"error":"ProtocolException: msgpack decoding failed","causes":["MessageTypeException: Expected Array, but got Integer (ff)"],"microservice":"niomon-decoder","requestId":"broken"}""")
   }
+
+  test("fail when no hardware id header is provided") {
+
+    val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\", \"payload\":1}".getBytes(StandardCharsets.UTF_8)
+
+    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage))
+
+    val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
+    toErrorMessages.size should be(1)
+
+    toErrorMessages.head should equal(
+      """{"error":"Exception: x-ubirch-hardware-id not found in headers","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+
+  }
+
+  test("fail when no hardware id header is different to the message uuid") {
+
+    val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\", \"payload\":1}".getBytes(StandardCharsets.UTF_8)
+
+    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426eb"))
+
+    val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
+    toErrorMessages.size should be(1)
+
+    toErrorMessages.head should equal(
+      """{"error":"ProtocolException: Header UUID does not match protocol message UUID","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+
+  }
+
+  test("fail when no payload is provided") {
+
+    val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\"}".getBytes(StandardCharsets.UTF_8)
+
+    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426ea"))
+
+    val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
+    toErrorMessages.size should be(1)
+
+    toErrorMessages.head should equal(
+      """{"error":"ProtocolException: Protocol message payload is null","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+
+  }
+
 }

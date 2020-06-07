@@ -1,8 +1,8 @@
 package com.ubirch.messagedecoder
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
 import java.util.concurrent.TimeUnit
+import java.util.{Base64, UUID}
 
 import com.ubirch.kafka.{MessageEnvelope, _}
 import com.ubirch.messagedecoder.MessageDecoderMicroservice._
@@ -28,18 +28,27 @@ class MessageDecoderMicroservice(runtime: NioMicroservice[Array[Byte], MessageEn
   private val uppCache: RMapCache[Array[Byte], String] = context.redisCache.redisson.getMapCache("verifier-upp-cache")
   private val uppTtl = config.getDuration("verifier-upp-cache.timeToLive")
   private val uppMaxIdleTime = config.getDuration("verifier-upp-cache.maxIdleTime")
+  private val HARDWARE_ID_HEADER_KEY = "x-ubirch-hardware-id"
 
   override def processRecord(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
     val pm = try transform(input.value()).get catch {
       case pe: ProtocolException => throw WithHttpStatus(400, pe)
     }
 
+    val headerUUID = Try(
+      input.findHeader(HARDWARE_ID_HEADER_KEY)
+        .map(UUID.fromString)
+        .get
+    ).getOrElse(throw WithHttpStatus(400, new Exception(s"$HARDWARE_ID_HEADER_KEY not found in headers")))
+
+    if (headerUUID != pm.getUUID) throw WithHttpStatus(400, new ProtocolException("Header UUID does not match protocol message UUID"))
+    if (pm.getPayload == null) throw WithHttpStatus(400, new ProtocolException("Protocol message payload is null"))
+
     try {
       val payload = pm.getPayload
-      if(payload != null){
-        val hash = payload.asText().getBytes(StandardCharsets.UTF_8)
-        uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
-      }
+      val hash = payload.asText().getBytes(StandardCharsets.UTF_8)
+      uppCache.fastPut(hash, b64(input.value()), uppTtl.toNanos, TimeUnit.NANOSECONDS, uppMaxIdleTime.toNanos, TimeUnit.NANOSECONDS)
+
     } catch {
       case ex: Throwable => logger.error("couldn't store upp to cache", ex)
     }
