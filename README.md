@@ -1,5 +1,5 @@
-# Niomon Decoder
-This microservice decodes ubirch protocol packets (UPPs) contained within kafka records.
+# Niomon Extractor
+This microservice verifies and decodes ubirch protocol packets (UPPs) contained within kafka records.
 
 ## Development
-Practically all the code is contained in [MessageDecoderMicroservice](./src/main/scala/com/ubirch/messagedecoder/MessageDecoderMicroservice.scala).
+Practically all the code is contained in [MessageExtractorMicroservice](src/main/scala/com/ubirch/extractor/MessageExtractorMicroservice.scala).

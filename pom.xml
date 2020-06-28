@@ -88,6 +88,22 @@
             <version>1.0.1-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-client-scala</artifactId>
+            <version>1.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-crypto</artifactId>
+            <version>${ubirch-crypto.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.skinny-framework</groupId>
+            <artifactId>skinny-http-client_${scala.major.version}</artifactId>
+            <version>${skinny-framework.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -100,7 +116,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.messagedecoder.Main</mainClass>
+                            <mainClass>com.ubirch.extractor.Main</mainClass>
                             <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
