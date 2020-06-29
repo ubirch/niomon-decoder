@@ -21,9 +21,7 @@ class MessageExtractorMicroservice(verifierFactory: NioMicroservice.Context => M
 }
 
 object MessageExtractorMicroservice {
-
   def apply(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier)
            (runtime: NioMicroservice[Array[Byte], MessageEnvelope]): MessageExtractorMicroservice =
     new MessageExtractorMicroservice(verifierFactory, runtime)
-
 }

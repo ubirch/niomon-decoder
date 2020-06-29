@@ -12,6 +12,27 @@ import org.bouncycastle.util.encoders.Hex
 
 trait Verify extends (ConsumerRecord[String, Array[Byte]] => ConsumerRecord[String, Array[Byte]])
 
+object Verify extends LazyLogging {
+  def differentiateUbirchMsgPackVersion(msgPack: Array[Byte]): Int = {
+    val hexMsgPack = Hex.toHexString(msgPack)
+    hexMsgPack(2) match {
+      case '1' =>
+        logger.info("msgPack version 1 was found")
+        3
+      case '2' =>
+        logger.info("msgPack version 2 was found")
+        2
+      case 'c' if hexMsgPack.slice(176, 178) == "54" =>
+        logger.info("trackle msgPack was found")
+        3
+      case thirdLetter =>
+        val errorMsg = s"Couldn't identify Ubirch msgPack protocol as third letter is neither 1, 2 or 'c' but $thirdLetter"
+        logger.error(errorMsg)
+        throw new IllegalArgumentException(errorMsg)
+    }
+  }
+}
+
 class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with LazyLogging {
 
   override def apply(record: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
@@ -25,7 +46,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           val msgPack = record.value()
 
           //Todo: Should I check the length of the package before splitting it?
-          val signatureIdentifierLength = differentiateUbirchMsgPackVersion(msgPack)
+          val signatureIdentifierLength = Verify.differentiateUbirchMsgPackVersion(msgPack)
           val restOfMessage = msgPack.dropRight(64 + signatureIdentifierLength)
           val signature = msgPack.takeRight(64)
 
@@ -46,25 +67,6 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
     } catch {
       case e: Exception =>
         throw WithHttpStatus(400, e)
-    }
-  }
-
-  private def differentiateUbirchMsgPackVersion(msgPack: Array[Byte]): Int = {
-    val hexMsgPack = Hex.toHexString(msgPack)
-    hexMsgPack(2) match {
-      case '1' =>
-        logger.info("msgPack version 1 was found")
-        3
-      case '2' =>
-        logger.info("msgPack version 2 was found")
-        2
-      case 'c' if hexMsgPack.slice(176, 178) == "54" =>
-        logger.info("trackle msgPack was found")
-        3
-      case thirdLetter =>
-        val errorMsg = s"Couldn't identify Ubirch msgPack protocol as third letter is neither 1, 2 or 'c' but $thirdLetter"
-        logger.error(errorMsg)
-        throw new IllegalArgumentException(errorMsg)
     }
   }
 
