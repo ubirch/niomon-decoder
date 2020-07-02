@@ -1,4 +1,4 @@
-package com.ubirch.extractor
+package com.ubirch.decoding
 
 import java.util.UUID
 

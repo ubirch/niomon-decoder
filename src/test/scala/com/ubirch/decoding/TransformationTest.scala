@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package com.ubirch.extractor
+package com.ubirch.decoding
 
-import com.ubirch.client.protocol.MultiKeyProtocolVerifier
-import com.ubirch.kafka.MessageEnvelope
-import com.ubirch.niomon.base.NioMicroserviceLive
+import org.scalatest.{FlatSpec, Matchers}
+import com.ubirch.decoding.Decode._
 
+class TransformationTest extends FlatSpec with Matchers {
 
-object Main {
-  def main(args: Array[String]): Unit = {
-    val _ = NioMicroserviceLive[Array[Byte], MessageEnvelope](
-      "niomon-decoder",
-      MessageExtractorMicroservice(c => new MultiKeyProtocolVerifier(new CachingUbirchKeyService(c)))
-    ).runUntilDoneAndShutdownProcess
+  "Message Payload Transformation" should "transform empty message" in {
+    val result = transform("{}".getBytes)
+    result.isSuccess shouldBe true
+    result.get.toString should equal("ProtocolMessage(v=0x00,hint=0x00)")
   }
 }

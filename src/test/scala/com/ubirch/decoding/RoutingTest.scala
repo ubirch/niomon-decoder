@@ -1,4 +1,4 @@
-package com.ubirch.extractor
+package com.ubirch.decoding
 
 import java.io.ByteArrayInputStream
 import java.util.{Base64, UUID}
@@ -62,7 +62,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     }
   }
 
-  private val microservice = NioMicroserviceMock(MessageExtractorMicroservice(c => new DefaultProtocolVerifier(keyServerClient(c))))
+  private val microservice = NioMicroserviceMock(MessageDecodingMicroservice(c => new DefaultProtocolVerifier(keyServerClient(c))))
   microservice.outputTopics = Map("valid" -> "valid")
   microservice.errorTopic = Some("invalid")
   microservice.config = ConfigFactory.load().getConfig("niomon-decoder")

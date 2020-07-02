@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ubirch.extractor
+package com.ubirch.decoding
 
 import java.nio.charset.StandardCharsets
 import java.util.{Base64, UUID}
@@ -32,11 +32,11 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 //noinspection TypeAnnotation
 class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  val extractor = (ns: NioMicroservice[Array[Byte], MessageEnvelope]) => new MessageExtractorMicroservice(_ => null, ns) {
+  val decodingSystem = (ns: NioMicroservice[Array[Byte], MessageEnvelope]) => new MessageDecodingMicroservice(_ => null, ns) {
     override def verify: Verify = (record: ConsumerRecord[String, Array[Byte]]) => record
   }
 
-  private val microservice = NioMicroserviceMock[Array[Byte], MessageEnvelope](x => extractor(x))
+  private val microservice = NioMicroserviceMock[Array[Byte], MessageEnvelope](x => decodingSystem(x))
   microservice.name = "niomon-decoder"
   microservice.outputTopics = Map("valid" -> "toverifier")
   microservice.errorTopic = Some("errors")

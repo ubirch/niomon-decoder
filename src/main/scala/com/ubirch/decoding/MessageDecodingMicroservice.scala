@@ -1,4 +1,4 @@
-package com.ubirch.extractor
+package com.ubirch.decoding
 
 import com.ubirch.client.protocol.MultiKeyProtocolVerifier
 import com.ubirch.kafka.MessageEnvelope
@@ -6,8 +6,8 @@ import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 
-class MessageExtractorMicroservice(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier,
-                                   runtime: NioMicroservice[Array[Byte], MessageEnvelope])
+class MessageDecodingMicroservice(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier,
+                                  runtime: NioMicroservice[Array[Byte], MessageEnvelope])
   extends NioMicroserviceLogic[Array[Byte], MessageEnvelope](runtime) {
 
   val protocolVerifier: MultiKeyProtocolVerifier = verifierFactory(context)
@@ -20,10 +20,10 @@ class MessageExtractorMicroservice(verifierFactory: NioMicroservice.Context => M
   }
 }
 
-object MessageExtractorMicroservice {
+object MessageDecodingMicroservice {
 
   def apply(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier)
-           (runtime: NioMicroservice[Array[Byte], MessageEnvelope]): MessageExtractorMicroservice =
-    new MessageExtractorMicroservice(verifierFactory, runtime)
+           (runtime: NioMicroservice[Array[Byte], MessageEnvelope]): MessageDecodingMicroservice =
+    new MessageDecodingMicroservice(verifierFactory, runtime)
 
 }
