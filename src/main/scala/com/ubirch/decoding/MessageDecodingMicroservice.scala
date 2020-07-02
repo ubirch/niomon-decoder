@@ -1,6 +1,7 @@
 package com.ubirch.decoding
 
 import com.ubirch.client.protocol.MultiKeyProtocolVerifier
+import com.ubirch.decoding.{Decode, DefaultDecode, DefaultVerify, Verify}
 import com.ubirch.kafka.MessageEnvelope
 import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import org.apache.kafka.clients.consumer.ConsumerRecord

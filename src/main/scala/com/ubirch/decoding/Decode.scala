@@ -16,13 +16,24 @@ import scala.util.Try
 
 trait Decode extends (ConsumerRecord[String, Array[Byte]] => ProducerRecord[String, MessageEnvelope])
 
-class DefaultDecode(topic: String) extends Decode with LazyLogging {
+object Decode {
 
-  import Decode._
+  def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
+    payload(0) match {
+      case '{' =>
+        JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+      case _ =>
+        MsgPackProtocolDecoder.getDecoder.decode(payload)
+    }
+  }
+
+}
+
+class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
   override def apply(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
 
-    val pm = try transform(input.value()).get catch {
+    val pm = try Decode.transform(input.value()).get catch {
       case pe: ProtocolException => throw WithHttpStatus(400, pe)
     }
 
@@ -45,19 +56,6 @@ class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
     input.toProducerRecord(topic, MessageEnvelope(pm))
 
-  }
-
-}
-
-object Decode {
-
-  def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
-    payload(0) match {
-      case '{' =>
-        JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
-      case _ =>
-        MsgPackProtocolDecoder.getDecoder.decode(payload)
-    }
   }
 
 }
