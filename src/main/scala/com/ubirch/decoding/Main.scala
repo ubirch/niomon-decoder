@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-package com.ubirch.messagedecoder
+package com.ubirch.decoding
 
-import akka.actor.{Actor, ActorRef}
+import com.ubirch.client.protocol.MultiKeyProtocolVerifier
+import com.ubirch.kafka.MessageEnvelope
+import com.ubirch.niomon.base.NioMicroserviceLive
 
-class Forwarder(target: ActorRef) extends Actor {
-  def receive: PartialFunction[Any, Unit] = {
-    case msg: Any => target ! msg
+
+object Main {
+  def main(args: Array[String]): Unit = {
+    val _ = NioMicroserviceLive[Array[Byte], MessageEnvelope](
+      "niomon-decoder",
+      MessageDecodingMicroservice(c => new MultiKeyProtocolVerifier(new CachingUbirchKeyService(c)))
+    ).runUntilDoneAndShutdownProcess
   }
 }

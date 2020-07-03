@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.ubirch.messagedecoder
+package com.ubirch.decoding
 
 import java.nio.charset.StandardCharsets
 import java.util.{Base64, UUID}
 
 import com.typesafe.config.ConfigFactory
-import com.ubirch.kafka.RichAnyProducerRecord
-import com.ubirch.niomon.base.NioMicroserviceMock
+import com.ubirch.kafka.{MessageEnvelope, RichAnyProducerRecord}
+import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceMock}
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s._
@@ -31,7 +32,11 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 //noinspection TypeAnnotation
 class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  val microservice = NioMicroserviceMock(MessageDecoderMicroservice(_))
+  val decodingSystem = (ns: NioMicroservice[Array[Byte], MessageEnvelope]) => new MessageDecodingMicroservice(_ => null, ns) {
+    override def verify: Verify = (record: ConsumerRecord[String, Array[Byte]]) => record
+  }
+
+  private val microservice = NioMicroserviceMock[Array[Byte], MessageEnvelope](x => decodingSystem(x))
   microservice.name = "niomon-decoder"
   microservice.outputTopics = Map("valid" -> "toverifier")
   microservice.errorTopic = Some("errors")
@@ -62,10 +67,13 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("send an error message if json decoding fails") {
+    val hardwareId = "6eac4d0b-16e6-4508-8c46-22e7451ea5a1"
     val binaryMessage = "{broken}".getBytes(StandardCharsets.UTF_8)
-    publishToKafka(new ProducerRecord("fromreceiver", "broken", binaryMessage))
+    publishToKafka(new ProducerRecord("fromreceiver", "broken", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
 
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
+
     toErrorsMessages.size should be(1)
 
     toErrorsMessages.head should equal("""{"error":"ProtocolException: extraction of signed data failed","causes":["JsonParseException: Unexpected character ('b' (code 98)): was expecting double-quote to start field name\n at [Source: (String)\"{broken}\"; line: 1, column: 3]"],"microservice":"niomon-decoder","requestId":"broken"}""")
