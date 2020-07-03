@@ -45,6 +45,7 @@
     <logger name="org.redisson" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
+
     <root level="INFO">
         <appender-ref ref="JSONSTDOUT"/>
     </root>
