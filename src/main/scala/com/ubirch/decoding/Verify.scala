@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.client.protocol.MultiKeyProtocolVerifier
 import com.ubirch.kafka.RichAnyConsumerRecord
 import com.ubirch.niomon.base.NioMicroservice.WithHttpStatus
+import net.logstash.logback.argument.StructuredArguments.v
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.bouncycastle.util.encoders.Hex
 
@@ -54,15 +55,17 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           //Todo: Use cached KeyServiceClient
           verifier
             .verifyMulti(hardwareId, restOfMessage, 0, restOfMessage.length, signature) match {
-            case Some(key) => record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
+            case Some(key) =>
+              logger.info(s"signature_verified_for=$hardwareId", v("requestId", record.key()))
+              record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
             case None =>
               val errorMsg = s"signature verification failed for msgPack of hardwareId $hardwareId."
-              logger.error(errorMsg)
+              logger.error(errorMsg, v("requestId", record.key()))
               throw new SignatureException("Invalid signature")
           }
         case None =>
           val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgPack."
-          logger.error(errorMsg)
+          logger.error(errorMsg, v("requestId", record.key()))
           throw new SignatureException(errorMsg)
       }
 
