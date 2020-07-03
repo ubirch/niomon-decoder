@@ -18,13 +18,13 @@ object Verify extends LazyLogging {
     val hexMsgPack = Hex.toHexString(msgPack)
     hexMsgPack(2) match {
       case '1' =>
-        logger.info("msgPack version 1 was found")
+        //logger.info("msgPack version 1 was found")
         3
       case '2' =>
-        logger.info("msgPack version 2 was found")
+        //logger.info("msgPack version 2 was found")
         2
       case 'c' if hexMsgPack.slice(176, 178) == "54" =>
-        logger.info("trackle msgPack was found")
+        //logger.info("trackle msgPack was found")
         3
       case thirdLetter =>
         val errorMsg = s"Couldn't identify Ubirch msgPack protocol as third letter is neither 1, 2 or 'c' but $thirdLetter"
