@@ -38,6 +38,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
   override def apply(record: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
 
     try {
+
       record.findHeader(HARDWARE_ID_HEADER_KEY) match {
 
         case Some(hardwareIdHeader: String) =>
@@ -64,9 +65,10 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           logger.error(errorMsg)
           throw new SignatureException(errorMsg)
       }
+
     } catch {
       case e: Exception =>
-        throw WithHttpStatus(400, e)
+        throw WithHttpStatus(FORBIDDEN, e)
     }
   }
 

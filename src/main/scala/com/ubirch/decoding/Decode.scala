@@ -14,6 +14,9 @@ import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.util.Try
 
+/**
+ * Represents a decoding function
+ */
 trait Decode extends (ConsumerRecord[String, Array[Byte]] => ProducerRecord[String, MessageEnvelope])
 
 object Decode {
@@ -29,22 +32,26 @@ object Decode {
 
 }
 
+/**
+ * Represents the default decoding function
+ * @param topic it is the topic to send decoded messages to.
+ */
 class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
   override def apply(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
 
     val pm = try Decode.transform(input.value()).get catch {
-      case pe: ProtocolException => throw WithHttpStatus(400, pe)
+      case pe: ProtocolException => throw WithHttpStatus(BAD_REQUEST, pe)
     }
+    if (pm.getPayload == null) throw WithHttpStatus(BAD_REQUEST, new ProtocolException("Protocol message payload is null"))
 
     val headerUUID = Try(
       input.findHeader(HARDWARE_ID_HEADER_KEY)
         .map(UUID.fromString)
         .get
-    ).getOrElse(throw WithHttpStatus(400, new Exception(s"$HARDWARE_ID_HEADER_KEY not found in headers")))
+    ).getOrElse(throw WithHttpStatus(BAD_REQUEST, new Exception(s"$HARDWARE_ID_HEADER_KEY not found in headers")))
 
-    if (headerUUID != pm.getUUID) throw WithHttpStatus(400, new ProtocolException("Header UUID does not match protocol message UUID"))
-    if (pm.getPayload == null) throw WithHttpStatus(400, new ProtocolException("Protocol message payload is null"))
+    if (headerUUID != pm.getUUID) throw WithHttpStatus(FORBIDDEN, new ProtocolException("Header UUID does not match protocol message UUID"))
 
     logger.info(s"decoded: $pm", v("requestId", input.key()))
 

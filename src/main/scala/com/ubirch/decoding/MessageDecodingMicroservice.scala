@@ -6,6 +6,11 @@ import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 
+/**
+ * Represents the implementation of a Niomicroservice.
+ * @param verifierFactory Represents a fund that builds a verifier.
+ * @param runtime Represents the underlying service that runs this implementation.
+ */
 class MessageDecodingMicroservice(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier,
                                   runtime: NioMicroservice[Array[Byte], MessageEnvelope])
   extends NioMicroserviceLogic[Array[Byte], MessageEnvelope](runtime) {
@@ -20,6 +25,9 @@ class MessageDecodingMicroservice(verifierFactory: NioMicroservice.Context => Mu
   }
 }
 
+/**
+ * Represents a companion object of this microservice
+ */
 object MessageDecodingMicroservice {
 
   def apply(verifierFactory: NioMicroservice.Context => MultiKeyProtocolVerifier)

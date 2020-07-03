@@ -5,8 +5,12 @@ import java.util.UUID
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.client.keyservice.UbirchKeyService
 import com.ubirch.crypto.PubKey
-import com.ubirch.niomon.base.NioMicroservice
+import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
 
+/**
+ * Represents a service for retrieving keys with a built-in cache
+ * @param context Represents parts of the runtime exposed to the [[NioMicroserviceLogic]] instance.
+ */
 class CachingUbirchKeyService(context: NioMicroservice.Context) extends UbirchKeyService({
   val url = context.config.getString("ubirchKeyService.client.rest.host")
   if (url.startsWith("http://") || url.startsWith("https://")) url else s"http://$url"
