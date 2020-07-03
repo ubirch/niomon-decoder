@@ -5,7 +5,7 @@ import java.util.UUID
 import com.typesafe.scalalogging.StrictLogging
 import com.ubirch.client.keyservice.UbirchKeyService
 import com.ubirch.crypto.PubKey
-import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceLogic}
+import com.ubirch.niomon.base.NioMicroservice
 
 /**
  * Represents a service for retrieving keys with a built-in cache
