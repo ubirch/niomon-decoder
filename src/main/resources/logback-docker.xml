@@ -38,7 +38,8 @@
     <logger name="com.ubirch" level="DEBUG"/>
     <logger name="com.ubirch.niomon.cache.RedisCache" level="WARN"/>
     <logger name="com.ubirch.client.protocol.MultiKeyProtocolVerifier" level="WARN"/>
-    <logger name="com.ubirch.niomon.base.NioMicroserviceLive" level="WARN"/>
+    <logger name="com.ubirch.niomon.base" level="WARN"/>
+    <logger name="com.ubirch.decoding.CachingUbirchKeyService" level="WARN"/>
 
     <logger name="org.apache.kafka" level="WARN"/>
     <logger name="akka.actor.TimerScheduler" level="WARN"/>
