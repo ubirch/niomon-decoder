@@ -20,8 +20,10 @@ class MessageDecodingMicroservice(verifierFactory: NioMicroservice.Context => Mu
   def verify: Verify = new DefaultVerify(protocolVerifier)
   def decode: Decode = new DefaultDecode(outputTopics("valid"))
 
+  lazy val verifyAndDecode = verify andThen decode
+
   override def processRecord(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
-    (verify andThen decode)(input)
+    verifyAndDecode(input)
   }
 }
 
