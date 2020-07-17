@@ -36,18 +36,18 @@ object Verify extends LazyLogging {
 
 class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with LazyLogging {
 
-  override def apply(input: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
+  override def apply(record: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
 
     try {
 
-      val requestId = input.requestIdHeader().orNull
+      val requestId = record.requestIdHeader().orNull
 
-      input.findHeader(HARDWARE_ID_HEADER_KEY) match {
+      record.findHeader(HARDWARE_ID_HEADER_KEY) match {
 
         case Some(hardwareIdHeader: String) =>
 
           val hardwareId = UUID.fromString(hardwareIdHeader)
-          val msgPack = input.value()
+          val msgPack = record.value()
 
           //Todo: Should I check the length of the package before splitting it?
           val signatureIdentifierLength = Verify.differentiateUbirchMsgPackVersion(msgPack)
@@ -59,7 +59,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
             .verifyMulti(hardwareId, restOfMessage, 0, restOfMessage.length, signature) match {
             case Some(key) =>
               logger.info(s"signature_verified_for=$hardwareId", v("requestId", requestId))
-              input.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
+              record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
             case None =>
               val errorMsg = s"signature verification failed for msgPack of hardwareId $hardwareId."
               logger.error(errorMsg, v("requestId", requestId))
