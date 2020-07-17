@@ -20,7 +20,6 @@ import com.ubirch.client.protocol.MultiKeyProtocolVerifier
 import com.ubirch.kafka.MessageEnvelope
 import com.ubirch.niomon.base.NioMicroserviceLive
 
-
 object Main {
   def main(args: Array[String]): Unit = {
     val _ = NioMicroserviceLive[Array[Byte], MessageEnvelope](

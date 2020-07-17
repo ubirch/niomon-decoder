@@ -20,4 +20,5 @@ class CachingUbirchKeyService(context: NioMicroservice.Context) extends UbirchKe
     context.cached(super.getPublicKey _).buildCache("public-keys-cache", shouldCache = _.nonEmpty)
 
   override def getPublicKey(uuid: UUID): List[PubKey] = getPublicKeysCached(uuid)
+
 }
