@@ -40,6 +40,8 @@ class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
   override def apply(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
 
+    val requestId = input.requestIdHeader().orNull
+
     val pm = try Decode.transform(input.value()).get catch {
       case pe: ProtocolException => throw WithHttpStatus(BAD_REQUEST, pe)
     }
@@ -53,11 +55,11 @@ class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
     if (headerUUID != pm.getUUID) throw WithHttpStatus(FORBIDDEN, new ProtocolException("Header UUID does not match protocol message UUID"))
 
-    logger.info(s"decoded: $pm", v("requestId", input.key()))
+    logger.info(s"decoded: $pm", v("requestId", requestId))
 
     // signer down the line doesn't support the legacy version, so we're upgrading the version here
     if ((pm.getVersion >> 4) == 1) {
-      logger.warn("detected old version of protocol, upgrading", v("requestId", input.key))
+      logger.warn("detected old version of protocol, upgrading", v("requestId", requestId))
       pm.setVersion((ProtocolMessage.ubirchProtocolVersion << 4) | (pm.getVersion & 0x0f))
     }
 

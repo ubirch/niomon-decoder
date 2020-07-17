@@ -36,16 +36,18 @@ object Verify extends LazyLogging {
 
 class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with LazyLogging {
 
-  override def apply(record: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
+  override def apply(input: ConsumerRecord[String, Array[Byte]]): ConsumerRecord[String, Array[Byte]] = {
 
     try {
 
-      record.findHeader(HARDWARE_ID_HEADER_KEY) match {
+      val requestId = input.requestIdHeader().orNull
+
+      input.findHeader(HARDWARE_ID_HEADER_KEY) match {
 
         case Some(hardwareIdHeader: String) =>
 
           val hardwareId = UUID.fromString(hardwareIdHeader)
-          val msgPack = record.value()
+          val msgPack = input.value()
 
           //Todo: Should I check the length of the package before splitting it?
           val signatureIdentifierLength = Verify.differentiateUbirchMsgPackVersion(msgPack)
@@ -56,16 +58,16 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           verifier
             .verifyMulti(hardwareId, restOfMessage, 0, restOfMessage.length, signature) match {
             case Some(key) =>
-              logger.info(s"signature_verified_for=$hardwareId", v("requestId", record.key()))
-              record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
+              logger.info(s"signature_verified_for=$hardwareId", v("requestId", requestId))
+              input.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
             case None =>
               val errorMsg = s"signature verification failed for msgPack of hardwareId $hardwareId."
-              logger.error(errorMsg, v("requestId", record.key()))
+              logger.error(errorMsg, v("requestId", requestId))
               throw new SignatureException("Invalid signature")
           }
         case None =>
           val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgPack."
-          logger.error(errorMsg, v("requestId", record.key()))
+          logger.error(errorMsg, v("requestId", requestId))
           throw new SignatureException(errorMsg)
       }
 
