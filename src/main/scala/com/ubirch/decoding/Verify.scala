@@ -40,11 +40,11 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
 
     try {
 
-      record.findHeader(HARDWARE_ID_HEADER_KEY) match {
+      val requestId = record.requestIdHeader().orNull
 
-        case Some(hardwareIdHeader: String) =>
+      record.findHeader(HARDWARE_ID_HEADER_KEY).map(UUID.fromString) match {
+        case Some(hardwareId) =>
 
-          val hardwareId = UUID.fromString(hardwareIdHeader)
           val msgPack = record.value()
 
           //Todo: Should I check the length of the package before splitting it?
@@ -56,16 +56,17 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           verifier
             .verifyMulti(hardwareId, restOfMessage, 0, restOfMessage.length, signature) match {
             case Some(key) =>
-              logger.info(s"signature_verified_for=$hardwareId", v("requestId", record.key()))
+              logger.info(s"signature_verified_for=$hardwareId", v("requestId", requestId))
               record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
             case None =>
               val errorMsg = s"signature verification failed for msgPack of hardwareId $hardwareId."
-              logger.error(errorMsg, v("requestId", record.key()))
+              logger.error(errorMsg, v("requestId", requestId))
               throw new SignatureException("Invalid signature")
           }
+
         case None =>
           val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgPack."
-          logger.error(errorMsg, v("requestId", record.key()))
+          logger.error(errorMsg, v("requestId", requestId))
           throw new SignatureException(errorMsg)
       }
 

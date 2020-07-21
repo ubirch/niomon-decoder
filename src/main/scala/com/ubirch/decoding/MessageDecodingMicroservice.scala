@@ -22,8 +22,8 @@ class MessageDecodingMicroservice(verifierFactory: NioMicroservice.Context => Mu
 
   lazy val verifyAndDecode = verify andThen decode
 
-  override def processRecord(input: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
-    verifyAndDecode(input)
+  override def processRecord(record: ConsumerRecord[String, Array[Byte]]): ProducerRecord[String, MessageEnvelope] = {
+    verifyAndDecode(record)
   }
 }
 

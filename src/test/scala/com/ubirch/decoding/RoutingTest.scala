@@ -9,10 +9,10 @@ import com.ubirch.client.protocol.DefaultProtocolVerifier
 import com.ubirch.client.util.curveFromString
 import com.ubirch.crypto.{GeneratorKeyFactory, PubKey}
 import com.ubirch.niomon.base.{NioMicroservice, NioMicroserviceMock}
+import com.ubirch.kafka.RichAnyProducerRecord
 import javax.xml.bind.DatatypeConverter
 import org.apache.commons.codec.binary.Hex
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.header.internals.{RecordHeader, RecordHeaders}
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
 import org.json4s.Formats
 import org.json4s.jackson.JsonMethods.parse
@@ -73,7 +73,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv2 with valid signature" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(v2MsgPackHex)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", 1, "foo", binary, new RecordHeaders().add(new RecordHeader("X-Ubirch-Hardware-Id".toLowerCase, v2HardwareId.getBytes())))
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v2HardwareId).withRequestIdHeader()("foo")
     publishToKafka(record)
 
     val validTopicEnvelopes = consumeNumberMessagesFrom("valid", 1, autoCommit = true)
@@ -90,7 +90,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv1 with valid signature" should "be routed to 'valid' queue" in {
     val binary = Hex.decodeHex(v1MsgPackHex)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", 1, "foo", binary, new RecordHeaders().add(new RecordHeader("X-Ubirch-Hardware-Id".toLowerCase, v1HardwareId.getBytes())))
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId).withRequestIdHeader()("foo")
     publishToKafka(record)
 
     val validTopicEnvelopes = consumeNumberMessagesFrom("valid", 1, autoCommit = true)
@@ -108,7 +108,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv1 with invalid signature" should "be routed to 'invalid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex + "12")
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", 1, "foo", binary, new RecordHeaders().add(new RecordHeader("X-Ubirch-Hardware-Id".toLowerCase, v1HardwareId.getBytes())))
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId).withRequestIdHeader()("foo")
     publishToKafka(record)
 
     val invalidTopicEnvelopes = consumeNumberStringMessagesFrom("invalid", 1, autoCommit = true)
@@ -120,7 +120,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv1 with no hwDeviceId in the header" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex + "12")
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", 1, "foo", binary, new RecordHeaders().add(new RecordHeader("No-Hardware-Id".toLowerCase, v1HardwareId.getBytes())))
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withRequestIdHeader()("foo")
     publishToKafka(record)
 
     val invalidTopicEnvelopes = consumeNumberMessagesFrom("invalid", 1, autoCommit = true)
@@ -132,7 +132,8 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "trackleMsg with valid signature" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(trackleMsgPack)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", 1, "foo", binary, new RecordHeaders().add(new RecordHeader("X-Ubirch-Hardware-Id".toLowerCase, trackleHardwareId.getBytes())))
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId).withRequestIdHeader()("foo")
+
     publishToKafka(record)
 
     val validTopicEnvelopes = consumeNumberMessagesFrom("valid", 1, autoCommit = true)

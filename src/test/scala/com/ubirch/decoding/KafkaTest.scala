@@ -69,8 +69,9 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   test("send an error message if json decoding fails") {
     val hardwareId = "6eac4d0b-16e6-4508-8c46-22e7451ea5a1"
     val binaryMessage = "{broken}".getBytes(StandardCharsets.UTF_8)
-    publishToKafka(new ProducerRecord("fromreceiver", "broken", binaryMessage)
-      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId)
+      .withRequestIdHeader()("broken"))
 
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
 
@@ -82,8 +83,9 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   test("decode a simple msgpack message") {
     val hardwareId = "6eac4d0b-16e6-4508-8c46-22e7451ea5a1"
     val msgpackData = Base64.getDecoder.decode("lRKwbqxNCxbmRQiMRiLnRR6loczvAdoAQFeKWyLOs+HQ0PiUfAmAEBM7RNOx0qs5h1j/7RFQe2B+03274Ab2RfDtD9vrG0i7UP1x2DI0DOAk1aDiHA68jg4=")
-    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData)
-      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", msgpackData)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId)
+      .withRequestIdHeader()("valid"))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
     toVerifierMessages.size should be(1)
@@ -99,8 +101,9 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
   test("decode a msgpack message with binary payload") {
     val hardwareId = "aef0a1ed-98be-430b-9833-f8703a912aa4"
     val msgpackData = Base64.getDecoder.decode("lhPEEK7woe2YvkMLmDP4cDqRKqTEQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBBzb21lIGJ5dGVzIQABAgOfxEBs2Nmi5a1gN0E9vHeKI7IGogRKzuQrIHN/EyQYKOXCeIGGrcmEFipr3sB2R+u0GmPmZp+ASRyop1HergptSUcF")
-    publishToKafka(new ProducerRecord("fromreceiver", "valid", msgpackData)
-      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", msgpackData)
+      .withExtraHeaders("x-ubirch-hardware-id" -> hardwareId)
+      .withRequestIdHeader()("valid"))
 
     val toVerifierMessages = consumeNumberStringMessagesFrom("toverifier", 1)
     toVerifierMessages.size should be(1)
@@ -121,7 +124,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   test("send an error message if msgpack decoding fails") {
     val msgpackData = Base64.getDecoder.decode("/zNE")
-    publishToKafka(new ProducerRecord("fromreceiver", "broken", msgpackData))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", msgpackData).withRequestIdHeader()("broken"))
 
     val toErrorsMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorsMessages.size should be(1)
@@ -134,7 +137,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
     val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\", \"payload\":1}".getBytes(StandardCharsets.UTF_8)
 
-    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", binaryMessage).withRequestIdHeader()("error"))
 
     val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorMessages.size should be(1)
@@ -148,8 +151,9 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
     val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\", \"payload\":1}".getBytes(StandardCharsets.UTF_8)
 
-    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage)
-      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426eb"))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426eb")
+      .withRequestIdHeader()("error"))
 
     val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorMessages.size should be(1)
@@ -163,8 +167,10 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
     val binaryMessage = "{\"version\":18, \"uuid\":\"d9ea390e-b202-4ff6-92fb-8ca9142426ea\"}".getBytes(StandardCharsets.UTF_8)
 
-    publishToKafka(new ProducerRecord("fromreceiver", "error", binaryMessage)
-      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426ea"))
+    publishToKafka(new ProducerRecord[String, Array[Byte]]("fromreceiver", binaryMessage)
+      .withExtraHeaders("x-ubirch-hardware-id" -> "d9ea390e-b202-4ff6-92fb-8ca9142426ea")
+      .withRequestIdHeader()("error")
+    )
 
     val toErrorMessages = consumeNumberStringMessagesFrom("errors", 1)
     toErrorMessages.size should be(1)
