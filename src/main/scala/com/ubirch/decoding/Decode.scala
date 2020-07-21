@@ -21,12 +21,15 @@ trait Decode extends (ConsumerRecord[String, Array[Byte]] => ProducerRecord[Stri
 
 object Decode {
 
+  lazy val jSONProtocolDecoder: JSONProtocolDecoder = JSONProtocolDecoder.getDecoder
+  lazy val msgPackProtocolDecoder: MsgPackProtocolDecoder = MsgPackProtocolDecoder.getDecoder
+
   def transform(payload: Array[Byte]): Try[ProtocolMessage] = Try {
     payload(0) match {
       case '{' =>
-        JSONProtocolDecoder.getDecoder.decode(new String(payload, StandardCharsets.UTF_8))
+        jSONProtocolDecoder.decode(new String(payload, StandardCharsets.UTF_8))
       case _ =>
-        MsgPackProtocolDecoder.getDecoder.decode(payload)
+        msgPackProtocolDecoder.decode(payload)
     }
   }
 
