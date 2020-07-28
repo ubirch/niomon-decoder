@@ -83,7 +83,10 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv2 with valid signature" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(v2MsgPackHex)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v2HardwareId).withRequestIdHeader()("foo")
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v2HardwareId)
+      .withRequestIdHeader()("foo")
+
     publishToKafka(record)
 
     val validTopicEnvelopes = consumeNumberMessagesFrom("valid", 1, autoCommit = true)
@@ -100,7 +103,10 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "msgpackv1 with valid signature" should "be routed to 'valid' queue" in {
     val binary = Hex.decodeHex(v1MsgPackHex)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId).withRequestIdHeader()("foo")
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId)
+      .withRequestIdHeader()("foo")
+
     publishToKafka(record)
 
     val validTopicEnvelopes = consumeNumberMessagesFrom("valid", 1, autoCommit = true)
@@ -116,9 +122,30 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   }
 
+  "msgpackv1 with invalid message parts" should "be routed to 'invalid' queue" in {
+    val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex).reverse.tail.reverse
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId)
+      .withRequestIdHeader()("foo")
+
+    publishToKafka(record)
+
+    val invalidTopicEnvelopes = consumeNumberStringMessagesFrom("invalid", 1, autoCommit = true)
+    invalidTopicEnvelopes.size should be(1)
+
+    val rejectedMessage = invalidTopicEnvelopes.head
+
+    println(rejectedMessage)
+    rejectedMessage should equal("""{"error":"SignatureException: Invalid parts for verification","causes":[],"microservice":"niomon-decoder","requestId":"foo"}""")
+  }
+
   "msgpackv1 with invalid signature" should "be routed to 'invalid' queue" in {
-    val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex + "12")
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId).withRequestIdHeader()("foo")
+    val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex).dropRight(1) ++ Array(7.toByte)
+
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId) // Wrong uuid
+      .withRequestIdHeader()("foo")
+
     publishToKafka(record)
 
     val invalidTopicEnvelopes = consumeNumberStringMessagesFrom("invalid", 1, autoCommit = true)
@@ -142,7 +169,9 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "trackleMsg with valid signature" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(trackleMsgPack)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId).withRequestIdHeader()("foo")
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId)
+      .withRequestIdHeader()("foo")
 
     publishToKafka(record)
 
@@ -158,7 +187,9 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   "trackleMsg message 2 with valid signature" should "be routed to 'valid' queue" in {
     val binary = DatatypeConverter.parseHexBinary(trackleMsgPack2)
-    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId2).withRequestIdHeader()("foo")
+    val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
+      .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId2)
+      .withRequestIdHeader()("foo")
 
     publishToKafka(record)
 
