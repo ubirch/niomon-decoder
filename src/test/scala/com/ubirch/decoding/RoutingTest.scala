@@ -164,7 +164,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     invalidTopicEnvelopes.size should be(1)
 
     val rejectedMessage: Array[Byte] = invalidTopicEnvelopes.head
-    rejectedMessage.map(_.toChar).mkString should equal("{\"error\":\"SignatureException: Header with key x-ubirch-hardware-id is missing. Cannot verify msgPack.\",\"causes\":[],\"microservice\":\"niomon-decoder\",\"requestId\":\"foo\"}")
+    rejectedMessage.map(_.toChar).mkString should equal("{\"error\":\"SignatureException: Header with key x-ubirch-hardware-id is missing. Cannot verify msgpack.\",\"causes\":[],\"microservice\":\"niomon-decoder\",\"requestId\":\"foo\"}")
   }
 
   "trackleMsg with valid signature" should "be routed to 'valid' queue" in {

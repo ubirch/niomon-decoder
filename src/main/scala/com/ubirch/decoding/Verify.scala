@@ -28,7 +28,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           .map(UUID.fromString)
           .get
       ).getOrElse{
-        val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgPack."
+        val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgpack."
         logger.error(errorMsg, v("requestId", requestId))
         throw new SignatureException(errorMsg)
       }
@@ -52,7 +52,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
           logger.info(s"signature_verified_for=$hardwareId", v("requestId", requestId))
           record.withExtraHeaders(("algorithm", key.getSignatureAlgorithm))
         case None =>
-          val errorMsg = s"signature verification failed for msgPack of hardwareId $hardwareId."
+          val errorMsg = s"signature verification failed for msgpack of hardwareId $hardwareId."
           logger.error(errorMsg, v("requestId", requestId))
           throw new SignatureException("Invalid signature")
       }
