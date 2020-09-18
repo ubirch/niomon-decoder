@@ -54,7 +54,7 @@ class DefaultDecode(topic: String) extends Decode with LazyLogging {
       record.findHeader(HARDWARE_ID_HEADER_KEY)
         .map(UUID.fromString)
         .get
-    ).getOrElse(throw WithHttpStatus(BAD_REQUEST, new Exception(s"$HARDWARE_ID_HEADER_KEY not found in headers")))
+    ).getOrElse(throw WithHttpStatus(BAD_REQUEST, new NoSuchMethodException(s"$HARDWARE_ID_HEADER_KEY not found in headers")))
 
     if (headerUUID != pm.getUUID) throw WithHttpStatus(FORBIDDEN, new ProtocolException("Header UUID does not match protocol message UUID"))
 

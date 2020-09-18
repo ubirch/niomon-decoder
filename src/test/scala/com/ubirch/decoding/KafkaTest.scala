@@ -143,7 +143,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     toErrorMessages.size should be(1)
 
     toErrorMessages.head should equal(
-      """{"error":"Exception: x-ubirch-hardware-id not found in headers","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+      """{"error":"NoSuchMethodException: x-ubirch-hardware-id not found in headers","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
 
   }
 
