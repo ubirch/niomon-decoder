@@ -136,7 +136,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     val rejectedMessage = invalidTopicEnvelopes.head
 
     println(rejectedMessage)
-    rejectedMessage should equal("""{"error":"SignatureException: Invalid parts for verification","causes":[],"microservice":"niomon-decoder","requestId":"foo"}""")
+    rejectedMessage should equal("""{"error":"IllegalArgumentException: Invalid parts for verification","causes":[],"microservice":"niomon-decoder","requestId":"foo"}""")
   }
 
   "msgpackv1 with invalid signature" should "be routed to 'invalid' queue" in {
@@ -164,7 +164,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     invalidTopicEnvelopes.size should be(1)
 
     val rejectedMessage: Array[Byte] = invalidTopicEnvelopes.head
-    rejectedMessage.map(_.toChar).mkString should equal("{\"error\":\"SignatureException: Header with key x-ubirch-hardware-id is missing. Cannot verify msgpack.\",\"causes\":[],\"microservice\":\"niomon-decoder\",\"requestId\":\"foo\"}")
+    rejectedMessage.map(_.toChar).mkString should equal("{\"error\":\"NoSuchElementException: Header with key x-ubirch-hardware-id is missing. Cannot verify msgpack.\",\"causes\":[],\"microservice\":\"niomon-decoder\",\"requestId\":\"foo\"}")
   }
 
   "trackleMsg with valid signature" should "be routed to 'valid' queue" in {

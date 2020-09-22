@@ -143,7 +143,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     toErrorMessages.size should be(1)
 
     toErrorMessages.head should equal(
-      """{"error":"NoSuchMethodException: x-ubirch-hardware-id not found in headers","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+      """{"error":"NoSuchElementException: x-ubirch-hardware-id not found in headers","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
 
   }
 
@@ -159,7 +159,7 @@ class KafkaTest extends FunSuite with Matchers with BeforeAndAfterAll {
     toErrorMessages.size should be(1)
 
     toErrorMessages.head should equal(
-      """{"error":"ProtocolException: Header UUID does not match protocol message UUID","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
+      """{"error":"IllegalArgumentException: Header UUID does not match protocol message UUID","causes":[],"microservice":"niomon-decoder","requestId":"error"}""")
 
   }
 
