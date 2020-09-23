@@ -30,7 +30,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
       ).getOrElse{
         val errorMsg = s"Header with key $HARDWARE_ID_HEADER_KEY is missing. Cannot verify msgpack."
         logger.error(errorMsg, v("requestId", requestId))
-        throw new SignatureException(errorMsg)
+        throw new NoSuchElementException(errorMsg)
       }
 
       //Todo: Check the length of package
@@ -39,7 +39,7 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
         .getOrElse{
           val errorMsg = s"error building message parts for hardwareId $hardwareId."
           logger.error(errorMsg, v("requestId", requestId))
-          throw new SignatureException("Invalid parts for verification")
+          throw new IllegalArgumentException("Invalid parts for verification")
         }
       val dataToVerify = dataToVerifyAndSignature(0)
       val signature = dataToVerifyAndSignature(1)
@@ -60,8 +60,15 @@ class DefaultVerify(verifier: MultiKeyProtocolVerifier) extends Verify with Lazy
 
     } catch {
       case e: Exception =>
-        throw WithHttpStatus(FORBIDDEN, e)
+        throw WithHttpStatus(FORBIDDEN, e, Some(xcode(e)))
     }
+  }
+
+  def xcode(reason: Throwable): Int = reason match {
+    case _: NoSuchElementException => 1100
+    case _: IllegalArgumentException => 1200
+    case _: SignatureException => 1300
+    case _ => 1500
   }
 
 }
