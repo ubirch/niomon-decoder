@@ -60,7 +60,7 @@ class DefaultDecode(topic: String) extends Decode with LazyLogging {
 
       if (headerUUID != pm.getUUID) throw WithHttpStatus(FORBIDDEN, new IllegalArgumentException("Header UUID does not match protocol message UUID"))
 
-      logger.info(s"decoded: $pm", v("requestId", requestId))
+      logger.info(s"decoded: $pm", v("requestId", requestId), v("uuid", pm.getUUID), v("hash", pm.getPayload))
 
       // signer down the line doesn't support the legacy version, so we're upgrading the version here
       if ((pm.getVersion >> 4) == 1) {
