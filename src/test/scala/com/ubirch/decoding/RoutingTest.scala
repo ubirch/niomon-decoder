@@ -80,8 +80,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   import microservice.kafkaMocks._
 
-
-  "msgpackv2 with valid signature" should "be routed to 'valid' queue" in {
+  "MessageDecodingMicroservice.Routing" should "be routed to 'valid' queue when msgpackv2 with valid signature" in {
     val binary = DatatypeConverter.parseHexBinary(v2MsgPackHex)
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
       .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v2HardwareId)
@@ -101,7 +100,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     (msg \ "payload").extract[String] should be("a4ayc/80/OGda4BO/1o/V0etpOqiLx1JwB5S3beHW0s=")
   }
 
-  "msgpackv1 with valid signature" should "be routed to 'valid' queue" in {
+  it should "be routed to 'valid' queue when msgpackv1 has valid signature" in {
     val binary = Hex.decodeHex(v1MsgPackHex)
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
       .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId)
@@ -122,7 +121,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
 
   }
 
-  "msgpackv1 with invalid message parts" should "be routed to 'invalid' queue" in {
+  it should "be routed to 'invalid' queue when msgpackv1 has invalid upp" in {
     val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex).reverse.tail.reverse
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
       .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> v1HardwareId)
@@ -134,12 +133,10 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     invalidTopicEnvelopes.size should be(1)
 
     val rejectedMessage = invalidTopicEnvelopes.head
-
-    println(rejectedMessage)
     rejectedMessage should equal("""{"error":"IllegalArgumentException: Invalid parts for verification","causes":[],"microservice":"niomon-decoder","requestId":"foo"}""")
   }
 
-  "msgpackv1 with invalid signature" should "be routed to 'invalid' queue" in {
+  it should "be routed to 'invalid' queue when msgpackv1 has invalid signature" in {
     val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex).dropRight(1) ++ Array(7.toByte)
 
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
@@ -155,7 +152,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     rejectedMessage should equal("""{"error":"SignatureException: Invalid signature","causes":[],"microservice":"niomon-decoder","requestId":"foo"}""")
   }
 
-  "msgpackv1 with no hwDeviceId in the header" should "be routed to 'valid' queue" in {
+  it should "be routed to 'invalid' queue when no hwDeviceId in the header is found" in {
     val binary = DatatypeConverter.parseHexBinary(v1MsgPackHex + "12")
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary).withRequestIdHeader()("foo")
     publishToKafka(record)
@@ -167,7 +164,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     rejectedMessage.map(_.toChar).mkString should equal("{\"error\":\"NoSuchElementException: Header with key x-ubirch-hardware-id is missing. Cannot verify msgpack.\",\"causes\":[],\"microservice\":\"niomon-decoder\",\"requestId\":\"foo\"}")
   }
 
-  "trackleMsg with valid signature" should "be routed to 'valid' queue" in {
+  it should "be routed to 'valid' queue when trackleMsg has valid signature" in {
     val binary = DatatypeConverter.parseHexBinary(trackleMsgPack)
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
       .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId)
@@ -185,7 +182,7 @@ class RoutingTest extends FlatSpec with Matchers with StrictLogging {
     (msg \ "uuid").extract[String] should equal(trackleHardwareId)
   }
 
-  "trackleMsg message 2 with valid signature" should "be routed to 'valid' queue" in {
+  it should "be routed to 'valid' queue when trackleMsg with valid signature 2" in {
     val binary = DatatypeConverter.parseHexBinary(trackleMsgPack2)
     val record = new ProducerRecord[String, Array[Byte]]("incoming", binary)
       .withExtraHeaders("X-Ubirch-Hardware-Id".toLowerCase -> trackleHardwareId2)
