@@ -37,7 +37,7 @@
 
     <logger name="com.ubirch" level="DEBUG"/>
     <logger name="com.ubirch.niomon.cache.RedisCache" level="WARN"/>
-    <logger name="com.ubirch.client.protocol.MultiKeyProtocolVerifier" level="WARN"/>
+    <logger name="com.ubirch.client.protocol.MultiKeyProtocolVerifier" level="ERROR"/>
     <logger name="com.ubirch.niomon.base" level="WARN"/>
     <logger name="com.ubirch.decoding.CachingUbirchKeyService" level="WARN"/>
 
